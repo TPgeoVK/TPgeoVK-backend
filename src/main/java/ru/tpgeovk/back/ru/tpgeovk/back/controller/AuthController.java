@@ -6,6 +6,7 @@ import com.vk.api.sdk.exceptions.ApiException;
 import com.vk.api.sdk.exceptions.ClientException;
 import com.vk.api.sdk.objects.UserAuthResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
@@ -19,8 +20,8 @@ public class AuthController {
 
     private static final String OAUTH_REDIRECT_URI = "https://oauth.vk.com/authorize?" +
             "client_id=" + VkContext.getAppId() +
-            "&redirect_uri=http://localhost:8080/auth/callback/code" +
-            "&display=page" +
+            "&redirect_uri=http://localhost:8080/auth/callback" +
+            "&display=mobile" +
             "&scope=friends,pages,notes,wall,groups" +
             "&response_type=code" +
             "&v=5.68";
@@ -42,19 +43,47 @@ public class AuthController {
     }
 
     @RequestMapping(path = "/auth/callback", method = RequestMethod.GET)
-    public ModelAndView authCodeCallback(@RequestParam(value = "code") String code) {
+    public ResponseEntity authCodeCallback(@RequestParam(value = "code") String code) {
         try {
             UserAuthResponse response = vk.oauth().userAuthorizationCodeFlow(VkContext.getAppId(),
                     VkContext.getSecureKey(), CODE_REDIRECT_URI, code)
                     .execute();
-            tokenService.putToken(response.getUserId(), response.getAccessToken());
 
-            return new ModelAndView("<html><body><br>" + response.getUserId().toString() +
-                "<br>" + response.getAccessToken() + "</body></html>");
+            Integer userId = response.getUserId();
+            String token = response.getAccessToken();
+
+            tokenService.putToken(userId, token);
+            System.out.println(userId.toString() + " " + token);
+
+            return ResponseEntity.ok(new UserIdResponse(userId));
 
         } catch (ApiException | ClientException e) {
             e.printStackTrace();
-            return new ModelAndView("<html><body>Error: " + e.getMessage() + "</body></html>");
+            return ResponseEntity.ok(new ErrorResponse(e.getMessage()));
+        }
+    }
+
+    private class UserIdResponse {
+        private Integer userId;
+
+        public UserIdResponse(Integer userId) {
+            this.userId = userId;
+        }
+
+        public Integer getUserId() {
+            return userId;
+        }
+    }
+
+    private class ErrorResponse {
+        private String error;
+
+        public ErrorResponse(String error) {
+            this.error = error;
+        }
+
+        public String getError() {
+            return error;
         }
     }
 }
