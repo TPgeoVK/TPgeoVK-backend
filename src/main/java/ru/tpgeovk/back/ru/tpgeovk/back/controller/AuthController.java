@@ -1,6 +1,5 @@
 package ru.tpgeovk.back.ru.tpgeovk.back.controller;
 
-import com.sun.org.apache.xpath.internal.operations.Mod;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.exceptions.ApiException;
 import com.vk.api.sdk.exceptions.ClientException;
@@ -8,12 +7,12 @@ import com.vk.api.sdk.objects.UserAuthResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 import ru.tpgeovk.back.VkContext;
 import ru.tpgeovk.back.ru.tpgeovk.back.service.TokenService;
-
-import javax.validation.Path;
 
 @Controller
 public class AuthController {
