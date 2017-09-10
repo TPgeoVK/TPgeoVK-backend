@@ -19,13 +19,13 @@ public class AuthController {
 
     private static final String OAUTH_REDIRECT_URI = "https://oauth.vk.com/authorize?" +
             "client_id=" + VkContext.getAppId() +
-            "&redirect_uri=http://localhost:8080/auth/callback" +
+            "&redirect_uri=https://tpgeovk-backend.herokuapp.com/auth/callback" +
             "&display=mobile" +
             "&scope=friends,pages,notes,wall,groups" +
             "&response_type=code" +
             "&v=5.68";
 
-    private static final String CODE_REDIRECT_URI = "http://localhost:8080/auth/callback";
+    private static final String CODE_REDIRECT_URI = "https://tpgeovk-backend.herokuapp.com/auth/callback";
 
     private final TokenService tokenService;
 
