@@ -72,7 +72,8 @@ public class PlaceDetectionService {
         try {
             /** Считаем количество чекинов друзей и пользователя в каждом месте */
             for (PlaceInfo place : places) {
-                checkinsResponse = vk.places().getCheckins(actor)
+                /** Issue #80 */
+                /*checkinsResponse = vk.places().getCheckins(actor)
                         .place(place.getId())
                         .execute();
 
@@ -83,13 +84,13 @@ public class PlaceDetectionService {
                     if (checkin.getUserId().equals(actor.getId())) {
                         place.updateUserCheckinsCount();
                     }
-                }
+                } */
 
                 /** За одно считаем и встерчаемость названия места в тексте */
                 place.setTextRating(textProcessor.fuzzyContainRating(place.getTitle(), text));
             }
 
-        } catch (ApiException | ClientException  e) {
+        } catch (Exception e) {
             throw new VkException(e);
         }
 

@@ -4,23 +4,18 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.vk.api.sdk.objects.places.PlaceFull;
 
 public class PlaceInfo {
+
+    private static final Integer MAX_DISTANCE = 300;
+
     private Integer id;
     private String title;
     private Float latitude;
     private Float longitude;
     private Integer distance;
     private Integer groupId;
-
-    @JsonIgnore
     private Integer checkinsCount;
-
-    @JsonIgnore
     private Integer userCheckinsCount;
-
-    @JsonIgnore
     private Integer friendsCheckinsCount;
-
-    @JsonIgnore
     private Integer textRating;
 
     public PlaceInfo(Integer id, String title, Float latitude, Float longitude, Integer distance,
@@ -46,7 +41,7 @@ public class PlaceInfo {
 
     public Integer calculateRating() {
         /** TODO: обучить коэффициенты */
-        return 5*distance + 5*userCheckinsCount + 4*friendsCheckinsCount + 4*checkinsCount + 3*textRating;
+        return 5*(MAX_DISTANCE - distance) + 5*userCheckinsCount + 4*friendsCheckinsCount + 4*checkinsCount + 3*textRating;
     }
 
     public void updateUserCheckinsCount() {

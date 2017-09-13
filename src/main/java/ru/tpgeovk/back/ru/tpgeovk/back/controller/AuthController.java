@@ -19,7 +19,7 @@ import javax.validation.Path;
 @Controller
 public class AuthController {
 
-    private static final String CODE_REDIRECT_URI = "http://localhost:8080/auth/callback";
+    private static final String CODE_REDIRECT_URI = "https://tpgeovk-backend.herokuapp.com/auth/callback";
 
     private static final String OAUTH_REDIRECT_URI = "https://oauth.vk.com/authorize?" +
             "client_id=" + VkContext.getAppId() +
