@@ -11,6 +11,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 import ru.tpgeovk.back.VkContext;
+import ru.tpgeovk.back.ru.tpgeovk.back.model.response.ErrorResponse;
 import ru.tpgeovk.back.ru.tpgeovk.back.service.TokenService;
 
 import javax.validation.Path;
@@ -18,15 +19,15 @@ import javax.validation.Path;
 @Controller
 public class AuthController {
 
+    private static final String CODE_REDIRECT_URI = "http://localhost:8080/auth/callback";
+
     private static final String OAUTH_REDIRECT_URI = "https://oauth.vk.com/authorize?" +
             "client_id=" + VkContext.getAppId() +
-            "&redirect_uri=http://localhost:8080/auth/callback" +
+            "&redirect_uri=" + CODE_REDIRECT_URI +
             "&display=mobile" +
             "&scope=friends,pages,notes,wall,groups" +
             "&response_type=code" +
             "&v=5.68";
-
-    private static final String CODE_REDIRECT_URI = "http://localhost:8080/auth/callback";
 
     private final TokenService tokenService;
 
@@ -72,18 +73,6 @@ public class AuthController {
 
         public Integer getUserId() {
             return userId;
-        }
-    }
-
-    private class ErrorResponse {
-        private String error;
-
-        public ErrorResponse(String error) {
-            this.error = error;
-        }
-
-        public String getError() {
-            return error;
         }
     }
 }

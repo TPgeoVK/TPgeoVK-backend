@@ -1,5 +1,6 @@
 package ru.tpgeovk.back.ru.tpgeovk.back.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.vk.api.sdk.objects.places.PlaceFull;
 
 public class PlaceInfo {
@@ -8,10 +9,18 @@ public class PlaceInfo {
     private Float latitude;
     private Float longitude;
     private Integer distance;
-    private Integer checkinsCount;
     private Integer groupId;
+
+    @JsonIgnore
+    private Integer checkinsCount;
+
+    @JsonIgnore
     private Integer userCheckinsCount;
+
+    @JsonIgnore
     private Integer friendsCheckinsCount;
+
+    @JsonIgnore
     private Integer textRating;
 
     public PlaceInfo(Integer id, String title, Float latitude, Float longitude, Integer distance,

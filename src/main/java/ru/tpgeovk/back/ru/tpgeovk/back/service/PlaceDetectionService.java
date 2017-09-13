@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.tpgeovk.back.VkContext;
 import ru.tpgeovk.back.ru.tpgeovk.back.controller.AuthController;
+import ru.tpgeovk.back.ru.tpgeovk.back.exception.VkException;
 import ru.tpgeovk.back.ru.tpgeovk.back.model.PlaceInfo;
 import ru.tpgeovk.back.ru.tpgeovk.back.text.TextProcessor;
 
@@ -37,7 +38,7 @@ public class PlaceDetectionService {
         vk = VkContext.getVkApiClient();
     }
 
-    public List<PlaceInfo> getPlaces(Integer userId, Float lat, Float lon, String text) {
+    public List<PlaceInfo> getPlaces(Integer userId, Float lat, Float lon, String text) throws VkException {
 
         UserActor actor = new UserActor(userId, tokenService.getToken(userId));
 
@@ -48,8 +49,7 @@ public class PlaceDetectionService {
                     .radius(1)
                     .execute();
         } catch (ApiException | ClientException e) {
-            e.printStackTrace();
-            return null;
+            throw new VkException(e);
         }
 
         /** Сортируем по расстоянию и преобразовываем в PlaceInfo */
@@ -65,8 +65,7 @@ public class PlaceDetectionService {
                     .order(FriendsGetOrder.HINTS)
                     .execute();
         } catch (ApiException | ClientException  e) {
-            e.printStackTrace();
-            return null;
+            throw new VkException(e);
         }
 
         GetCheckinsResponse checkinsResponse = null;
@@ -91,14 +90,13 @@ public class PlaceDetectionService {
             }
 
         } catch (ApiException | ClientException  e) {
-            e.printStackTrace();
-            return null;
+            throw new VkException(e);
         }
 
         return places;
     }
 
-    public Optional<PlaceInfo> predictPlace(List<PlaceInfo> places) {
-        return places.stream().max(Comparator.comparing(PlaceInfo::calculateRating));
+    public  PlaceInfo predictPlace(List<PlaceInfo> places) {
+        return places.stream().max(Comparator.comparing(PlaceInfo::calculateRating)).get();
     }
 }
