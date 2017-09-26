@@ -1,4 +1,4 @@
-package ru.tpgeovk.back.ru.tpgeovk.back.model;
+package ru.tpgeovk.back.ru.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.vk.api.sdk.objects.places.PlaceFull;

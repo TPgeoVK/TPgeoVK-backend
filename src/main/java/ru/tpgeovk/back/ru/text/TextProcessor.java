@@ -1,4 +1,4 @@
-package ru.tpgeovk.back.ru.tpgeovk.back.text;
+package ru.tpgeovk.back.ru.text;
 
 public class TextProcessor {
 

@@ -1,4 +1,4 @@
-package ru.tpgeovk.back.ru.tpgeovk.back.controller;
+package ru.tpgeovk.back.ru.controller;
 
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.exceptions.ApiException;
@@ -12,8 +12,8 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 import ru.tpgeovk.back.VkContext;
-import ru.tpgeovk.back.ru.tpgeovk.back.model.response.ErrorResponse;
-import ru.tpgeovk.back.ru.tpgeovk.back.service.TokenService;
+import ru.tpgeovk.back.ru.model.response.ErrorResponse;
+import ru.tpgeovk.back.ru.service.TokenService;
 
 @Controller
 public class AuthController {
