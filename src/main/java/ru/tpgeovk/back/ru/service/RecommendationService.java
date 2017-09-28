@@ -1,5 +1,7 @@
 package ru.tpgeovk.back.ru.service;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.vk.api.sdk.actions.Search;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.UserActor;
@@ -11,11 +13,13 @@ import com.vk.api.sdk.objects.database.responses.GetCitiesResponse;
 import com.vk.api.sdk.objects.database.responses.GetCountriesResponse;
 import com.vk.api.sdk.objects.friends.responses.GetResponse;
 import com.vk.api.sdk.objects.groups.Group;
+import com.vk.api.sdk.objects.groups.GroupFull;
 import com.vk.api.sdk.objects.groups.GroupIsClosed;
 import com.vk.api.sdk.objects.groups.responses.SearchResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.tpgeovk.back.VkContext;
+import ru.tpgeovk.back.ru.model.GroupInfo;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -23,40 +27,22 @@ import java.util.stream.Collectors;
 @Service
 public class RecommendationService {
 
-    private final TokenService tokenService;
+    /** TODO: добавить нормальную обработку исключений */
+
     private final VkApiClient vk;
 
+    private Gson gson = new Gson();
+
     @Autowired
-    public RecommendationService(TokenService tokenService) {
-        this.tokenService = tokenService;
+    public RecommendationService() {
         vk = VkContext.getVkApiClient();
     }
 
-    public List<String> recommendEventByCity(String city, String country, UserActor actor) {
-        Integer cityId = getIdByCity(city, country, actor);
-        if (cityId == null) {
+    public List<GroupInfo> recommendEventByFriends(String city, String country, UserActor actor) {
+        List<GroupInfo> events = getEventsInCity(city, country, actor);
+        if (events == null) {
             return null;
         }
-
-        SearchResponse searchResponse = null;
-        try {
-            /** Ищем все события в городе */
-            searchResponse = vk.groups().search(actor, "*")
-                    .cityId(cityId)
-                    .count(100)
-                    .type("event")
-                    .future(true)
-                    .execute();
-        } catch (ApiException | ClientException e) {
-            e.printStackTrace();
-            return null;
-        }
-        if (searchResponse.getItems().isEmpty()) {
-            return null;
-        }
-        List<Group> events = searchResponse.getItems().stream()
-                .filter(a -> a.getIsClosed().equals(GroupIsClosed.OPEN))
-                .collect(Collectors.toList());
 
         /** Этап 1. Ищем события, в которых участвуют друзья или сам пользователь. */
         /** Этап 2. Ищем наиболее близкие события к событиям пользователя на основе
@@ -73,11 +59,10 @@ public class RecommendationService {
             return null;
         }
         List<Integer> friendsIds = friendsResponse.getItems();
-        Map<String, Long> friendsCount = new HashMap<>();
 
         /** Смотрим, сколько друзей в каждом мероприятии */
-        /** TODO: исправить на vk.execute() */
-        for (Group event : events) {
+        /** TODO: брать только первые 500 друзей */
+        for (GroupInfo event : events) {
             Long count = 0L;
             int limit = friendsIds.size() / 500;
             int step = 0;
@@ -86,7 +71,7 @@ public class RecommendationService {
                     count = count + vk.groups().isMember(actor, event.getId(),
                             friendsIds.subList(500*step, 500*(step+1))).execute()
                             .stream().filter(a -> a.isMember()).count();
-                    friendsCount.put(event.getId(), count);
+                    event.setFriendsCount(count);
                 } catch (ApiException | ClientException e) {
                     e.printStackTrace();
                     return null;
@@ -96,7 +81,7 @@ public class RecommendationService {
                 count = count + vk.groups().isMember(actor, event.getId(),
                         friendsIds.subList(500*step, friendsIds.size())).execute()
                         .stream().filter(a -> a.isMember()).count();
-                friendsCount.put(event.getId(), count);
+                event.setFriendsCount(count);
             } catch (ApiTooManyException e) {
                 try {
                     Thread.currentThread().sleep(2000);
@@ -109,9 +94,60 @@ public class RecommendationService {
             }
         }
 
-        return friendsCount.keySet().stream()
-                .filter(a -> (!friendsCount.get(a).equals(0L)))
+        return events.stream()
+                .filter(a -> !a.getFriendsCount().equals(0))
                 .collect(Collectors.toList());
+    }
+
+    public List<String> recommendEventByStory(String city, String country, UserActor actor) {
+        List<GroupInfo> events = getEventsInCity(city, country, actor);
+        if (events == null) {
+            return null;
+        }
+
+        String eventIds = events.stream().map(a -> a.getId()).collect(Collectors.joining(","));
+        String executeCode = "var res = API.groups.getById({\"group_ids\": " + eventIds +
+                ", \"fields\": \"name,description,place\"}); return res;";
+        JsonElement respone = null;
+        try {
+            respone = vk.execute().code(actor, executeCode).execute();
+        } catch (ApiException | ClientException e) {
+            e.printStackTrace();
+            return null;
+        }
+
+        return null;
+    }
+
+    public List<GroupInfo> getEventsInCity(String city, String country, UserActor actor) {
+        Integer cityId = getIdByCity(city, country, actor);
+        if (cityId == null) {
+            return null;
+        }
+
+        SearchResponse searchResponse = null;
+        /** TODO: получить GroupFull через execute */
+        try {
+            /** Ищем все события в городе */
+            searchResponse = vk.groups().search(actor, "*")
+                    .cityId(cityId)
+                    .count(100)
+                    .type("event")
+                    .future(true)
+                    .execute();
+        } catch (ApiException | ClientException e) {
+            e.printStackTrace();
+            return null;
+        }
+        if (searchResponse.getItems().isEmpty()) {
+            return null;
+        }
+        List<GroupInfo> events = searchResponse.getItems().stream()
+                .filter(a -> a.getIsClosed().equals(GroupIsClosed.OPEN))
+                .map(a -> GroupInfo.fromGroup(a))
+                .collect(Collectors.toList());
+
+        return events;
     }
 
     public Integer getIdByCity(String city, String country, UserActor actor) {
