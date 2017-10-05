@@ -10,9 +10,10 @@ public class GroupInfo {
     private String description;
     private Integer membersCount;
     private Long friendsCount;
-
-    /** TODO: добавить id и координаты места */
+    private Integer placeId;
     private String placeTitle;
+    private Float longitude;
+    private Float latitude;
 
     public static GroupInfo fromGroup(Group group) {
         GroupInfo res = new GroupInfo();
@@ -28,22 +29,15 @@ public class GroupInfo {
         res.setDescription(groupFull.getDescription());
         res.setMembersCount(groupFull.getMembersCount());
         if (groupFull.getPlace() != null) {
+            res.setPlaceId(groupFull.getPlace().getId());
+            res.setLongitude(groupFull.getPlace().getLongitude());
+            res.setLatitude(groupFull.getPlace().getLatitude());
             res.setPlaceTitle(groupFull.getPlace().getTitle());
         }
         return res;
     }
 
     public GroupInfo() { }
-
-    public GroupInfo(String id, String name, String description, Integer membersCount, String placeTitle,
-                     Long friendsCount) {
-        this.id = id;
-        this.name = name;
-        this.description = description;
-        this.membersCount = membersCount;
-        this.placeTitle = placeTitle;
-        this.friendsCount = friendsCount;
-    }
 
     public String getId() {
         return id;
@@ -77,19 +71,25 @@ public class GroupInfo {
         this.membersCount = membersCount;
     }
 
-    public String getPlaceTitle() {
-        return placeTitle;
-    }
-
-    public void setPlaceTitle(String placeTitle) {
-        this.placeTitle = placeTitle;
-    }
-
     public Long getFriendsCount() {
         return friendsCount;
     }
 
-    public void setFriendsCount(Long friendsCount) {
-        this.friendsCount = friendsCount;
-    }
+    public void setFriendsCount(Long friendsCount) { this.friendsCount = friendsCount; }
+
+    public Integer getPlaceId() { return placeId; }
+
+    public void setPlaceId(Integer placeId) { this.placeId = placeId; }
+
+    public String getPlaceTitle() { return placeTitle; }
+
+    public void setPlaceTitle(String placeTitle) { this.placeTitle = placeTitle; }
+
+    public Float getLongitude() { return longitude; }
+
+    public void setLongitude(Float longitude) { this.longitude = longitude; }
+
+    public Float getLatitude() { return latitude; }
+
+    public void setLatitude(Float latitude) { this.latitude = latitude; }
 }

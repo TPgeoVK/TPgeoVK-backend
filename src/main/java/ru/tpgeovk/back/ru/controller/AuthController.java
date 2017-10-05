@@ -18,7 +18,10 @@ import ru.tpgeovk.back.ru.service.TokenService;
 @Controller
 public class AuthController {
 
-    private static final String CODE_REDIRECT_URI = "https://tpgeovk-backend.herokuapp.com/auth/callback";
+    private static final String DEPLOY_URL = "https://tpgeovk-backend.herokuapp.com";
+    private static final String DEBUG_URL = "http://localhost:8080";
+
+    private static final String CODE_REDIRECT_URI = DEBUG_URL.concat("/auth/callback");
 
     private static final String OAUTH_REDIRECT_URI = "https://oauth.vk.com/authorize?" +
             "client_id=" + VkContext.getAppId() +
