@@ -7,20 +7,22 @@ import java.util.HashMap;
 @Service
 public class TokenService  {
 
-    private HashMap<Integer, String> tokens = new HashMap<>();
+    private HashMap<String, Integer> tokenToUser = new HashMap<>();
 
-    public void putToken(Integer userId, String token) {
-        tokens.put(userId, token);
+    public void put(String token, Integer userId) {
+        tokenToUser.put(token, userId);
     }
 
-    public String getToken(Integer userId) {
-        if (!tokens.containsKey(userId)) {
+    public Integer getUserId(String token) {
+        if (!tokenToUser.containsKey(token)) {
             return null;
         }
-        String token = tokens.get(userId);
-        if (token == null) {
-            tokens.remove(userId);
+
+        Integer userId = tokenToUser.get(token);
+        if (userId == null) {
+            tokenToUser.remove(token);
         }
-        return token;
+
+        return userId;
     }
 }

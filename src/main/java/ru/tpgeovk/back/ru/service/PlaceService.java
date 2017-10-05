@@ -37,9 +37,8 @@ public class PlaceService {
         vk = VkContext.getVkApiClient();
     }
 
-    public List<PlaceInfo> getPlaces(Integer userId, Float lat, Float lon, String text) throws VkException {
-
-        UserActor actor = new UserActor(userId, tokenService.getToken(userId));
+    public List<PlaceInfo> getPlaces(Float lat, Float lon, String text, UserActor actor)
+            throws VkException {
 
         /** Получаем все места в радиусе 300 метров */
         SearchResponse response = null;

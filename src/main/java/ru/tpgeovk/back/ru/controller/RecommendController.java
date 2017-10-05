@@ -27,16 +27,16 @@ public class RecommendController {
     }
 
     @RequestMapping(path = "/recommend/event/byFriends", method = RequestMethod.GET)
-    public ResponseEntity getEventByFriends(@RequestParam(value = "userid") Integer userId,
+    public ResponseEntity getEventByFriends(@RequestParam(value = "token") String token,
                                             @RequestParam(value = "country") String country,
                                             @RequestParam(value = "city") String city) {
 
-        String token = tokenService.getToken(userId);
+        Integer userId = tokenService.getUserId(token);
         if (token == null) {
             return ResponseEntity.ok(new ErrorResponse("User not authenticated"));
         }
-
         UserActor actor = new UserActor(userId, token);
+
         List<GroupInfo> result = recommendationService.recommendEventByFriends(city, country, actor);
         if (result == null) {
             return ResponseEntity.ok(new ErrorResponse("Unable to recommend any events"));

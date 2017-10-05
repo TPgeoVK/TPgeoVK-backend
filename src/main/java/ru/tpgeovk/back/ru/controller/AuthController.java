@@ -21,15 +21,29 @@ public class AuthController {
     private static final String DEPLOY_URL = "https://tpgeovk-backend.herokuapp.com";
     private static final String DEBUG_URL = "http://localhost:8080";
 
-    private static final String CODE_REDIRECT_URI = DEBUG_URL.concat("/auth/callback");
+    private static final String SERVER_URL;
 
-    private static final String OAUTH_REDIRECT_URI = "https://oauth.vk.com/authorize?" +
-            "client_id=" + VkContext.getAppId() +
-            "&redirect_uri=" + CODE_REDIRECT_URI +
-            "&display=mobile" +
-            "&scope=friends,pages,notes,wall,groups" +
-            "&response_type=code" +
-            "&v=5.68";
+    private static final String CODE_REDIRECT_URI;
+    private static final String OAUTH_REDIRECT_URI;
+
+    private static final String REDIRECT_SUCCESS;
+    private static final String REDIRECT_ERROR;
+
+    static {
+        SERVER_URL = DEBUG_URL;
+
+        CODE_REDIRECT_URI = SERVER_URL.concat("/auth/callback");
+        OAUTH_REDIRECT_URI = "https://oauth.vk.com/authorize?" +
+                "client_id=" + VkContext.getAppId() +
+                "&redirect_uri=" + CODE_REDIRECT_URI +
+                "&display=mobile" +
+                "&scope=" + VkContext.getScope() +
+                "&response_type=code" +
+                "&v=" + VkContext.getApiVersion();
+
+        REDIRECT_SUCCESS = SERVER_URL.concat("/auth/callback/success");
+        REDIRECT_ERROR = SERVER_URL.concat("/auth/callback/error");
+    }
 
     private final TokenService tokenService;
 
@@ -46,24 +60,38 @@ public class AuthController {
     }
 
     @RequestMapping(path = "/auth/callback", method = RequestMethod.GET)
-    public ResponseEntity authCodeCallback(@RequestParam(value = "code") String code) {
+    public ModelAndView authCodeCallback(@RequestParam(value = "code") String code) {
+        UserAuthResponse response = null;
+
         try {
-            UserAuthResponse response = vk.oauth().userAuthorizationCodeFlow(VkContext.getAppId(),
+            response = vk.oauth().userAuthorizationCodeFlow(VkContext.getAppId(),
                     VkContext.getSecureKey(), CODE_REDIRECT_URI, code)
                     .execute();
-
-            Integer userId = response.getUserId();
-            String token = response.getAccessToken();
-
-            tokenService.putToken(userId, token);
-            System.out.println(userId.toString() + " " + token);
-
-            return ResponseEntity.ok(new UserIdResponse(userId));
-
         } catch (ApiException | ClientException e) {
-            e.printStackTrace();
-            return ResponseEntity.ok(new ErrorResponse(e.getMessage()));
+            e.printStackTrace();;
+            return new ModelAndView("redirect:" + REDIRECT_ERROR + "?message=" + e.getMessage());
         }
+
+        Integer usereId = response.getUserId();
+        String token = response.getAccessToken();
+
+        tokenService.put(token, usereId);
+
+        return new ModelAndView("redirect:" + REDIRECT_SUCCESS + "?userid=" + usereId.toString() +
+            "&token=" + token);
+    }
+
+    @RequestMapping(path = "/auth/callback/success", method = RequestMethod.GET)
+    public ResponseEntity authSuccess(@RequestParam(value = "userid") String userId,
+                                      @RequestParam(value = "token") String token) {
+        /** Метод нужен только для задания URL'а с токеном и id пользователя */
+        return ResponseEntity.ok(null);
+    }
+
+    @RequestMapping(path = "/auth/callback/error", method = RequestMethod.GET)
+    public ResponseEntity authError(@RequestParam(value = "message") String message) {
+        /** Метод нужен только для задания URL'а с сообщением об ошибке */
+        return ResponseEntity.ok(null);
     }
 
     private class UserIdResponse {
