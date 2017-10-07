@@ -1,6 +1,5 @@
-package ru.tpgeovk.back.ru.model;
+package ru.tpgeovk.back.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.vk.api.sdk.objects.places.PlaceFull;
 
 public class PlaceInfo {

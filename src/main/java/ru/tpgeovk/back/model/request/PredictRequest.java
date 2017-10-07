@@ -1,4 +1,4 @@
-package ru.tpgeovk.back.ru.model.request;
+package ru.tpgeovk.back.model.request;
 
 public class PredictRequest {
 

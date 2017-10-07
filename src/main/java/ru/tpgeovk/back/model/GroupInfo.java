@@ -1,4 +1,4 @@
-package ru.tpgeovk.back.ru.model;
+package ru.tpgeovk.back.model;
 
 import com.vk.api.sdk.objects.groups.Group;
 import com.vk.api.sdk.objects.groups.GroupFull;

@@ -1,25 +1,19 @@
-package ru.tpgeovk.back.ru.service;
+package ru.tpgeovk.back.service;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
-import com.vk.api.sdk.actions.Search;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.UserActor;
 import com.vk.api.sdk.exceptions.ApiException;
-import com.vk.api.sdk.exceptions.ApiTooManyException;
 import com.vk.api.sdk.exceptions.ClientException;
 import com.vk.api.sdk.objects.base.Country;
 import com.vk.api.sdk.objects.database.responses.GetCitiesResponse;
 import com.vk.api.sdk.objects.database.responses.GetCountriesResponse;
 import com.vk.api.sdk.objects.friends.responses.GetResponse;
-import com.vk.api.sdk.objects.groups.Group;
-import com.vk.api.sdk.objects.groups.GroupFull;
-import com.vk.api.sdk.objects.groups.GroupIsClosed;
-import com.vk.api.sdk.objects.groups.responses.SearchResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.tpgeovk.back.VkContext;
-import ru.tpgeovk.back.ru.model.GroupInfo;
+import ru.tpgeovk.back.model.GroupInfo;
 
 import java.util.*;
 import java.util.stream.Collectors;

@@ -1,15 +1,15 @@
-package ru.tpgeovk.back.ru.controller;
+package ru.tpgeovk.back.controller;
 
 import com.vk.api.sdk.client.actors.UserActor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import ru.tpgeovk.back.ru.exception.VkException;
-import ru.tpgeovk.back.ru.model.PlaceInfo;
-import ru.tpgeovk.back.ru.model.request.PredictRequest;
-import ru.tpgeovk.back.ru.model.response.ErrorResponse;
-import ru.tpgeovk.back.ru.service.PlaceService;
-import ru.tpgeovk.back.ru.service.TokenService;
+import ru.tpgeovk.back.exception.VkException;
+import ru.tpgeovk.back.model.PlaceInfo;
+import ru.tpgeovk.back.model.request.PredictRequest;
+import ru.tpgeovk.back.model.response.ErrorResponse;
+import ru.tpgeovk.back.service.PlaceService;
+import ru.tpgeovk.back.service.TokenService;
 
 import java.util.List;
 

@@ -1,4 +1,4 @@
-package ru.tpgeovk.back.ru.model.response;
+package ru.tpgeovk.back.model.response;
 
 public class ErrorResponse {
 

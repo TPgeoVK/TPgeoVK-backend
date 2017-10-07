@@ -1,4 +1,4 @@
-package ru.tpgeovk.back.ru.controller;
+package ru.tpgeovk.back.controller;
 
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.exceptions.ApiException;
@@ -12,8 +12,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 import ru.tpgeovk.back.VkContext;
-import ru.tpgeovk.back.ru.model.response.ErrorResponse;
-import ru.tpgeovk.back.ru.service.TokenService;
+import ru.tpgeovk.back.service.TokenService;
 
 @Controller
 public class AuthController {
@@ -74,18 +73,16 @@ public class AuthController {
             return new ModelAndView("redirect:" + REDIRECT_ERROR + "?message=" + e.getMessage());
         }
 
-        Integer usereId = response.getUserId();
+        Integer userId = response.getUserId();
         String token = response.getAccessToken();
 
-        tokenService.put(token, usereId);
+        tokenService.put(token, userId);
 
-        return new ModelAndView("redirect:" + REDIRECT_SUCCESS + "?userid=" + usereId.toString() +
-            "&token=" + token);
+        return new ModelAndView("redirect:" + REDIRECT_SUCCESS + "?token=" + token);
     }
 
     @RequestMapping(path = "/auth/callback/success", method = RequestMethod.GET)
-    public ResponseEntity authSuccess(@RequestParam(value = "userid") String userId,
-                                      @RequestParam(value = "token") String token) {
+    public ResponseEntity authSuccess(@RequestParam(value = "token") String token) {
         /** Метод нужен только для задания URL'а с токеном и id пользователя */
         return ResponseEntity.ok(null);
     }

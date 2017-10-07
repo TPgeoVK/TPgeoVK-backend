@@ -1,4 +1,4 @@
-package ru.tpgeovk.back.ru.service;
+package ru.tpgeovk.back.service;
 
 import org.springframework.stereotype.Service;
 

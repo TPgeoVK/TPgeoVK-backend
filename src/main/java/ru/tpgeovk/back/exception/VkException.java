@@ -1,4 +1,4 @@
-package ru.tpgeovk.back.ru.exception;
+package ru.tpgeovk.back.exception;
 
 public class VkException extends Exception {
 

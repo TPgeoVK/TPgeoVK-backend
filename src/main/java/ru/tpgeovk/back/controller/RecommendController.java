@@ -1,4 +1,4 @@
-package ru.tpgeovk.back.ru.controller;
+package ru.tpgeovk.back.controller;
 
 import com.vk.api.sdk.client.actors.UserActor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,10 +7,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import ru.tpgeovk.back.ru.model.GroupInfo;
-import ru.tpgeovk.back.ru.model.response.ErrorResponse;
-import ru.tpgeovk.back.ru.service.RecommendationService;
-import ru.tpgeovk.back.ru.service.TokenService;
+import ru.tpgeovk.back.model.GroupInfo;
+import ru.tpgeovk.back.model.response.ErrorResponse;
+import ru.tpgeovk.back.service.RecommendationService;
+import ru.tpgeovk.back.service.TokenService;
 
 import java.util.List;
 
