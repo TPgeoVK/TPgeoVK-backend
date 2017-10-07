@@ -18,8 +18,7 @@ import ru.tpgeovk.back.ru.service.TokenService;
 @Controller
 public class AuthController {
 
-    private static final String DEPLOY_URL = "https://tpgeovk-backend.herokuapp.com";
-    private static final String DEBUG_URL = "http://localhost:8080";
+    private static final String ENV_DEPLOY_URL = "TPGEOVK_DEPLOY_URL";
 
     private static final String SERVER_URL;
 
@@ -30,7 +29,10 @@ public class AuthController {
     private static final String REDIRECT_ERROR;
 
     static {
-        SERVER_URL = DEBUG_URL;
+        SERVER_URL = System.getenv(ENV_DEPLOY_URL);
+        if (SERVER_URL == null) {
+            throw new RuntimeException("Environment variable TPGEOVK_DEPLOY_URL is wrong or not set");
+        }
 
         CODE_REDIRECT_URI = SERVER_URL.concat("/auth/callback");
         OAUTH_REDIRECT_URI = "https://oauth.vk.com/authorize?" +
