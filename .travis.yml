@@ -3,7 +3,7 @@ jdk:
 - oraclejdk8
 addons:
   ssh_known_hosts:
-  - student.bmstu.cloud
+  - student.bmstu.cloud:12103
 before_deploy:
   - ./before_install.sh
 deploy:
