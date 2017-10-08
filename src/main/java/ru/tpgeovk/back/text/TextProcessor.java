@@ -2,6 +2,7 @@ package ru.tpgeovk.back.text;
 
 import com.github.askdrcatcher.jrake.*;
 import com.github.askdrcatcher.jrake.util.FileUtil;
+import com.vk.api.sdk.objects.places.responses.SearchResponse;
 
 import java.io.IOException;
 import java.util.*;
@@ -17,7 +18,6 @@ public class TextProcessor {
     }
 
     public static Set<String> extractKeyWords(String text) {
-        text = filterText(text);
 
        final Rake rakeInstance = new Rake();
 
@@ -44,6 +44,26 @@ public class TextProcessor {
         }
 
         return keyWords;
+    }
+
+    public static Double compareTexts(String text1, String text2) {
+        text1 = filterText(text1);
+        text2 = filterText(text2);
+
+        Set<String> keyWords1 = extractKeyWords(text1);
+        Set<String> keyWords2 = extractKeyWords(text2);
+
+        Set<String> minSet = keyWords1.size() < keyWords2.size() ? keyWords1 : keyWords2;
+        Set<String> maxSet = keyWords1 == minSet ? keyWords2 : keyWords1;
+        int commonWords = 0;
+        for (String word : minSet) {
+            if (maxSet.contains(word)) {
+                commonWords++;
+            }
+        }
+        double totalWords = keyWords1.size() + keyWords2.size() - commonWords;
+
+        return commonWords/totalWords;
     }
 
     public int fuzzyContainRating(String needle, String text) {

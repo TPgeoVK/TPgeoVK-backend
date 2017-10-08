@@ -1,6 +1,7 @@
 package ru.tpgeovk.back.service;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.UserActor;
@@ -10,10 +11,13 @@ import com.vk.api.sdk.objects.base.Country;
 import com.vk.api.sdk.objects.database.responses.GetCitiesResponse;
 import com.vk.api.sdk.objects.database.responses.GetCountriesResponse;
 import com.vk.api.sdk.objects.friends.responses.GetResponse;
+import com.vk.api.sdk.objects.groups.GroupFull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.tpgeovk.back.VkContext;
+import ru.tpgeovk.back.exception.VkException;
 import ru.tpgeovk.back.model.GroupInfo;
+import ru.tpgeovk.back.text.TextProcessor;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -25,11 +29,12 @@ public class RecommendationService {
 
     private final VkApiClient vk;
 
-    private Gson gson = new Gson();
+    private Gson gson;
 
     @Autowired
     public RecommendationService() {
         vk = VkContext.getVkApiClient();
+        gson = new GsonBuilder().create();
     }
 
     public List<GroupInfo> recommendEventByFriends(String city, String country, UserActor actor) {
@@ -172,5 +177,40 @@ public class RecommendationService {
         }
 
         return citiesResponse.getItems().get(0).getId();
+    }
+
+    public Double compareGroups(UserActor actor, GroupFull group1, GroupFull group2) throws VkException {
+        String text1 = group1.getName() + " " + group1.getDescription();
+        String text2 = group2.getName() + " " + group2.getDescription();
+
+        String script = "return API.wall.get({\"owner_id\":" + group1.getId().toString() + ", \"filter\":\"owner\"," +
+                "\"count\":10}).items@.text;";
+        JsonElement response;
+        try {
+            response = vk.execute().code(actor, script).execute();
+        } catch (ApiException | ClientException e) {
+            e.printStackTrace();
+            throw new VkException(e);
+        }
+        String[] posts1 = gson.fromJson(response, String[].class);
+
+        script = "return API.wall.get({\"owner_id\":" + group2.getId().toString() + ", \"filter\":\"owner\"," +
+                "\"count\":10}).items@.text;";
+        try {
+            response = vk.execute().code(actor, script).execute();
+        } catch (ApiException | ClientException e) {
+            e.printStackTrace();
+            throw new VkException(e);
+        }
+        String[] posts2 = gson.fromJson(response, String[].class);
+
+        for (String str : posts1) {
+            text1 = text1 + " " + str;
+        }
+        for (String str : posts2) {
+            text2 = text2 + " " + str;
+        }
+
+        return TextProcessor.compareTexts(text1, text2);
     }
 }
