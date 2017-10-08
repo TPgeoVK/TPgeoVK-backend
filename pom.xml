@@ -85,6 +85,7 @@
             <version>2.0.0</version>
         </dependency>
 
+        <!-- JRAKE (local) -->
         <dependency>
             <groupId>askdrcatcher.github.com</groupId>
             <artifactId>JRAKE</artifactId>
