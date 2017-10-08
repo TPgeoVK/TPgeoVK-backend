@@ -1,13 +1,11 @@
 language: java
 jdk:
 - oraclejdk8
+before_deploy:
+  - before_install.sh
 deploy:
-  provider: heroku
-  api_key:
-    secure: GqZnQYJ4aiiqwefJvTA7lTjkdpqfTsvJKCzia1HbwmuE56NV7aX98xruhyTDvCH/fLPvCCFQhF04+685WrEFDXt0sxIKiLEr/iQmy0zOoByGRjgYcTED/Lps/f/9Xbxb5PNmh+I5yCG24acB+nTs3GoSN6ZPeOC65Ke0kLjOXvlbD8cvNjp5KlTpQYp8+rUNjDEUtJ7WnVKvAdYx4EhRwfuEzoOuHaylXGBjYv8EaQpvZQ+qr5cWrx9vc8CWnB8q97FgzuZsVNPkPodRVMfJpo6FRBcw5u3NgioxmxlUtU+WdlATynkffIBQGz9m6e3JohqjPaF+sTsJmtEHYxaCzHKUhWmy/4D5Taw9aKahBZiPOmTWiTTrKiTz7+oSvP1g5xQojg7qagQcV3gFTDy85SI3JTC8rj2hCWPgcDOHrsXO3LGHppJuvOjhMIjMb9L/SjcSgp97fNu/LuYzzZKqGWoyuS7i88fv/c9VQk5bZywUBT6C5/zb4M0hOsTtY9JqzPGth5ny0e+QYy2AXmjjpdtppX8/k0z1eyyTqCYvaWSNPzkJcIqzYFZZnSZ0CXbLVTdWsq8D7p7xAUkyNgStttR7YMeR3O2n5flNK9L3sJLHDfgai9xMCvTdBO8J/HVoNroCDJA1jA3Xh1K42n95j6sWA07DixERN3tMlu6SLOw=
-  app: tpgeovk-backend
+  skip_cleanup: true
+  provider: script
+  script: deploy.sh
   on:
-    repo: TPgeoVK/TPgeoVK-backend
-before_install:
-- openssl aes-256-cbc -K $encrypted_f955482a5e6e_key -iv $encrypted_f955482a5e6e_iv
-  -in travis_rsa.enc -out ~\/.ssh/travis_rsa -d
+    branch: mastert
