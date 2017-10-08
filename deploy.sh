@@ -7,10 +7,10 @@ if [ $TRAVIS_BRANCH == 'master' ] ; then
     git remote add deploy "ssh://tpgeovk@student.bmstu.cloud:12103/home/tpgeovk/deploy"
     git config user.name "Travis CI"
     git config user.email "rentgeny05@gmail.com"
-    
+
     git add .
     git commit -m "Deploy"
-    git push --force -q deploy master
+    git push --force deploy master
 else
     echo "Not deploying, since this branch isn't master."
 fi
