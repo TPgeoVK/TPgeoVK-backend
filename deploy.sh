@@ -4,7 +4,7 @@ if [ $TRAVIS_BRANCH == 'master' ] ; then
     cd target
     git init
 
-    echo "yes" > git remote add deploy "ssh://tpgeovk@student.bmstu.cloud:12103/home/tpgeovk/deploy"
+    git remote add deploy "ssh://tpgeovk@student.bmstu.cloud:12103/home/tpgeovk/deploy"
     git config user.name "Travis CI"
     git config user.email "rentgeny05@gmail.com"
     
