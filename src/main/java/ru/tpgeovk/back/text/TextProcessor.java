@@ -2,6 +2,14 @@ package ru.tpgeovk.back.text;
 
 public class TextProcessor {
 
+    public static String filterText(String text) {
+        text = text.trim()
+                .replaceAll("[^a-zA-Zа-яА-Я]", " ")
+                .toLowerCase()
+                .replaceAll(" +", " ");
+        return text;
+    }
+
     public int fuzzyContainRating(String needle, String text) {
         needle = needle.toLowerCase().replace('#', ' ').replace('_', ' ');
         text = text.toLowerCase().replace('#', ' ').replace('_', ' ');
