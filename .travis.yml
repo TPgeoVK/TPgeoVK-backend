@@ -2,10 +2,10 @@ language: java
 jdk:
 - oraclejdk8
 before_deploy:
-  - before_install.sh
+  - ./before_install.sh
 deploy:
   skip_cleanup: true
   provider: script
-  script: deploy.sh
+  script: ./deploy.sh
   on:
     branch: master
