@@ -10,7 +10,7 @@ if [ $TRAVIS_BRANCH == 'master' ] ; then
 
     git add .
     git commit -m "Deploy"
-    yes | git push --force deploy master
+    git push deploy master --force
 else
     echo "Not deploying, since this branch isn't master."
 fi
