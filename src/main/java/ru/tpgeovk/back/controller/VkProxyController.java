@@ -13,6 +13,7 @@ import ru.tpgeovk.back.model.response.ErrorResponse;
 import ru.tpgeovk.back.service.TokenService;
 import ru.tpgeovk.back.service.VkProxyService;
 
+import java.awt.geom.FlatteningPathIterator;
 import java.util.List;
 
 @RestController
@@ -40,6 +41,36 @@ public class VkProxyController {
         List<CheckinInfo> result;
         try {
             result = vkService.getAllUserCheck(actor);
+        } catch (VkException e) {
+            return ResponseEntity.ok(new ErrorResponse(e.getMessage()));
+        }
+
+        return ResponseEntity.ok(result);
+    }
+
+    @RequestMapping(path = "/vkapi/checkins/latest", method = RequestMethod.GET)
+    public ResponseEntity getLatestCheckins(@RequestParam(value = "token") String token,
+                                            @RequestParam(value = "latitude") String lat,
+                                            @RequestParam(value = "longitude") String lon) {
+
+        Float latitude;
+        Float longitude;
+        try {
+            latitude = Float.parseFloat(lat);
+            longitude = Float.parseFloat(lon);
+        } catch (NumberFormatException e) {
+            return ResponseEntity.ok(new ErrorResponse("Wrong coordinates values!"));
+        }
+
+        Integer userId = tokenService.getUserId(token);
+        if (userId == null) {
+            return ResponseEntity.ok(new ErrorResponse("Unknown token received"));
+        }
+        UserActor actor = new UserActor(userId, token);
+
+        List<CheckinInfo> result;
+        try {
+            result = vkService.getLatestCheckins(actor, latitude, longitude);
         } catch (VkException e) {
             return ResponseEntity.ok(new ErrorResponse(e.getMessage()));
         }

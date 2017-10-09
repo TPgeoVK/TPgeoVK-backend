@@ -1,6 +1,7 @@
 package ru.tpgeovk.back.model;
 
 import com.vk.api.sdk.objects.base.Place;
+import com.vk.api.sdk.objects.places.Checkin;
 import com.vk.api.sdk.objects.wall.WallpostFull;
 
 public class CheckinInfo {
