@@ -7,11 +7,10 @@ import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.UserActor;
 import com.vk.api.sdk.exceptions.ApiException;
 import com.vk.api.sdk.exceptions.ClientException;
-import com.vk.api.sdk.objects.places.responses.GetCheckinsResponse;
 import com.vk.api.sdk.objects.wall.WallpostFull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import ru.tpgeovk.back.VkContext;
+import ru.tpgeovk.back.contexts.VkContext;
 import ru.tpgeovk.back.exception.VkException;
 import ru.tpgeovk.back.model.CheckinInfo;
 

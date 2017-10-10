@@ -1,4 +1,4 @@
-package ru.tpgeovk.back;
+package ru.tpgeovk.back.contexts;
 
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.httpclient.HttpTransportClient;
@@ -16,9 +16,11 @@ public class VkContext {
     private static final String SCOPE = "friends,pages,notes,wall,groups";
     private static final String API_VERSION = "5.68";
 
+    private static final VkApiClient VK_API_CLIENT;
+
     static {
         if (System.getenv("TPGEOVK_VK_APP_ID") == null) {
-            throw new RuntimeException("Environment variable TPGEOVK_VK_APP_ID_is wrong or not set");
+            throw new RuntimeException("Environment variable TPGEOVK_VK_APP_ID is wrong or not set");
         }
         APP_ID = Integer.valueOf(System.getenv(ENV_APP_ID));
 
@@ -31,9 +33,9 @@ public class VkContext {
         if (ACCESS_KEY == null) {
             throw new RuntimeException("Environment variable TPGEOVK_VK_ACCESS_KEY is wrong or not set");
         }
-    }
 
-    private static final VkApiClient VK_API_CLIENT = new VkApiClient(new HttpTransportClient());
+        VK_API_CLIENT = new VkApiClient(new HttpTransportClient());
+    }
 
     public static Integer getAppId() {
         return APP_ID;

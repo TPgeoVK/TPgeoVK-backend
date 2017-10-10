@@ -14,7 +14,7 @@ import com.vk.api.sdk.objects.friends.responses.GetResponse;
 import com.vk.api.sdk.objects.groups.GroupFull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import ru.tpgeovk.back.VkContext;
+import ru.tpgeovk.back.contexts.VkContext;
 import ru.tpgeovk.back.exception.VkException;
 import ru.tpgeovk.back.model.GroupInfo;
 import ru.tpgeovk.back.text.TextProcessor;
@@ -29,12 +29,15 @@ public class RecommendationService {
 
     private final VkApiClient vk;
 
-    private Gson gson;
+    private final Gson gson;
+
+    private final GeoService geoService;
 
     @Autowired
-    public RecommendationService() {
+    public RecommendationService(GeoService geoService) {
         vk = VkContext.getVkApiClient();
         gson = new GsonBuilder().create();
+        this.geoService = geoService;
     }
 
     public List<GroupInfo> recommendEventByFriends(String city, String country, UserActor actor) {

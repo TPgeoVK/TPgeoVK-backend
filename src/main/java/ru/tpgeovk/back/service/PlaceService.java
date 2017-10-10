@@ -11,7 +11,7 @@ import com.vk.api.sdk.objects.places.responses.SearchResponse;
 import com.vk.api.sdk.queries.friends.FriendsGetOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import ru.tpgeovk.back.VkContext;
+import ru.tpgeovk.back.contexts.VkContext;
 import ru.tpgeovk.back.exception.VkException;
 import ru.tpgeovk.back.model.PlaceInfo;
 import ru.tpgeovk.back.text.TextProcessor;
