@@ -1,6 +1,6 @@
 # TPgeoVK-backend
 Бэкенд проекта GeoVK.
 Документация к API:
- - [./doc/auth.md] (Авторизация)
- - [./doc/models.md] (Объекты API)
- - [./doc/methods.md] (Методы API)
+ - [Авторизация] (./doc/auth.md)
+ - [Объекты API] (./doc/models.md)
+ - [Методы API] (./doc/methods.md)
