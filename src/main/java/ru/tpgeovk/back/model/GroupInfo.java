@@ -9,7 +9,7 @@ public class GroupInfo {
     private String name;
     private String description;
     private Integer membersCount;
-    private Long friendsCount;
+    private Integer friendsCount;
     private Integer placeId;
     private String placeTitle;
     private Float longitude;
@@ -71,11 +71,11 @@ public class GroupInfo {
         this.membersCount = membersCount;
     }
 
-    public Long getFriendsCount() {
+    public Integer getFriendsCount() {
         return friendsCount;
     }
 
-    public void setFriendsCount(Long friendsCount) { this.friendsCount = friendsCount; }
+    public void setFriendsCount(Integer friendsCount) { this.friendsCount = friendsCount; }
 
     public Integer getPlaceId() { return placeId; }
 

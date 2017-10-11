@@ -3,6 +3,7 @@ package ru.tpgeovk.back.service;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
+import com.google.gson.reflect.TypeToken;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.UserActor;
 import com.vk.api.sdk.exceptions.ApiException;
@@ -12,9 +13,11 @@ import com.vk.api.sdk.objects.database.responses.GetCitiesResponse;
 import com.vk.api.sdk.objects.database.responses.GetCountriesResponse;
 import com.vk.api.sdk.objects.friends.responses.GetResponse;
 import com.vk.api.sdk.objects.groups.GroupFull;
+import com.vk.api.sdk.queries.groups.GroupsGetMembersFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.tpgeovk.back.contexts.VkContext;
+import ru.tpgeovk.back.exception.GoogleException;
 import ru.tpgeovk.back.exception.VkException;
 import ru.tpgeovk.back.model.GroupInfo;
 import ru.tpgeovk.back.text.TextProcessor;
@@ -25,7 +28,8 @@ import java.util.stream.Collectors;
 @Service
 public class RecommendationService {
 
-    /** TODO: добавить нормальную обработку исключений */
+    private static final String SCRIPT_EVENTS = "var events = API.groups.search({\"q\":\"*\",\"cityId\":%d,\"count\":25,\"type\":\"event\",\"future\":true,});\n" +
+            "var eventIds = events.items@.id;\nreturn API.groups.getById({\"group_ids\":eventIds,\"fields\":\"description,members_count,place\"});\n";
 
     private final VkApiClient vk;
 
@@ -40,146 +44,62 @@ public class RecommendationService {
         this.geoService = geoService;
     }
 
-    public List<GroupInfo> recommendEventByFriends(String city, String country, UserActor actor) {
-        List<GroupInfo> events = getEventsInCity(city, country, actor);
-        if (events == null) {
-            return null;
+    public List<GroupInfo> recommendEventByFriends(Float latitude, Float longitude, UserActor actor)
+            throws GoogleException, VkException {
+
+        List<GroupInfo> events = getEventsInCity(latitude, longitude, actor);
+        if (events.isEmpty()) {
+            return events;
         }
 
-        /** Этап 1. Ищем события, в которых участвуют друзья или сам пользователь. */
-        /** Этап 2. Ищем наиболее близкие события к событиям пользователя на основе
-         * какой-либо меры (косинусное расстояние и т.п.). Наиболее важные поля -
-         * название события, описание и количество участников.
-         */
-
-        /** Получаем список друзей пользователя */
-        GetResponse friendsResponse = null;
-        try {
-            friendsResponse = vk.friends().get(actor).count(500).execute();
-        } catch (ApiException | ClientException e) {
-            e.printStackTrace();
-            return null;
-        }
-        List<Integer> friendsIds = friendsResponse.getItems();
-
-        /** Смотрим, сколько друзей в каждом мероприятии */
+        String script = "var result = [];\n";
         for (GroupInfo event : events) {
-            Long count = 0L;
-            try {
-                count = vk.groups().isMember(actor, event.getId(), friendsIds).execute().stream()
-                        .filter(a -> a.isMember()).count();
-                Thread.currentThread().sleep(500);
-            } catch (ApiException | ClientException e) {
-                e.printStackTrace();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            event.setFriendsCount(count);
+            script = script + "result = result + [API.groups.getMembers({\"group_id\":\"" + event.getId() + "\"," +
+                    "\"filter\":\"friends\"}).items.length];\n";
         }
-
-        return events.stream()
-                .filter(a -> !a.getFriendsCount().equals(Long.valueOf(0)))
-                .collect(Collectors.toList());
-    }
-
-    public List<String> recommendEventByStory(String city, String country, UserActor actor) {
-        List<GroupInfo> events = getEventsInCity(city, country, actor);
-        if (events == null) {
-            return null;
-        }
-
-        String eventIds = events.stream().map(a -> a.getId()).collect(Collectors.joining(","));
-        String executeCode = "var res = API.groups.getById({\"group_ids\": " + eventIds +
-                ", \"fields\": \"name,description,place\"}); return res;";
-        JsonElement respone = null;
+        script = script + "return result;";
+        JsonElement respone;
         try {
-            respone = vk.execute().code(actor, executeCode).execute();
+            respone = vk.execute().code(actor, script).execute();
         } catch (ApiException | ClientException e) {
             e.printStackTrace();
-            return null;
+            throw new VkException(e.getMessage(), e);
         }
 
-        return null;
+        Integer[] friendCounts = gson.fromJson(respone, Integer[].class);
+        int i = 0;
+        for (GroupInfo event : events) {
+            event.setFriendsCount(friendCounts[i]);
+            i++;
+        }
+
+        return events.stream().filter(a -> !a.getFriendsCount().equals(0)).collect(Collectors.toList());
     }
 
-    public List<GroupInfo> getEventsInCity(String city, String country, UserActor actor) {
-        Integer cityId = getIdByCity(city, country, actor);
+    public List<GroupInfo> getEventsInCity(Float latitude, Float longitude, UserActor actor) throws VkException,
+            GoogleException {
+        Integer cityId = geoService.resolveCityId(latitude, longitude, actor);
         if (cityId == null) {
-            return null;
+            /** TODO: нужно ли сообщать, что не получилось найти город? */
+            return new ArrayList<>();
         }
 
-        StringBuilder builder = new StringBuilder();
-        String script = builder
-                .append("var events = API.groups.search({\"q\":\"*\",\"cityId\":" + cityId.toString() +
-                        ",\"count\":10,\"type\":\"event\",\"future\":true});\n")
-                .append("var eventIds = events.items@.id;\n")
-                .append("return API.groups.getById({\"group_ids\":eventIds});\n")
-                .toString();
-        JsonElement response = null;
+        String script = String.format(SCRIPT_EVENTS, cityId);
+        JsonElement response;
         try {
             response = vk.execute().code(actor, script).execute();
         } catch (ApiException | ClientException e) {
             e.printStackTrace();
-            return null;
+            throw new VkException(e.getMessage(), e);
         }
 
-        return null;
-
-        /*
-        SearchResponse searchResponse = null;
-        /** TODO: получить GroupFull через execute
-        try {
-            /** Ищем все события в городе
-            searchResponse = vk.groups().search(actor, "*")
-                    .cityId(cityId)
-                    .count(10)
-                    .type("event")
-                    .future(true)
-                    .execute();
-        } catch (ApiException | ClientException e) {
-            e.printStackTrace();
-            return null;
-        }
-        if (searchResponse.getItems().isEmpty()) {
-            return null;
-        }
-        List<GroupInfo> events = searchResponse.getItems().stream()
-                .filter(a -> a.getIsClosed().equals(GroupIsClosed.OPEN))
-                .map(a -> GroupInfo.fromGroup(a))
-                .collect(Collectors.toList());
-
-        return events; */
-    }
-
-    public Integer getIdByCity(String city, String country, UserActor actor) {
-        GetCountriesResponse countriesResponse = null;
-        try {
-            /** TODO: cache! */
-            countriesResponse = vk.database().getCountries(actor).execute();
-        } catch (ApiException | ClientException e) {
-            e.printStackTrace();
-            return null;
-        }
-        Optional<Country> countrySearch = countriesResponse.getItems().stream()
-                .filter((Country a) -> a.getTitle().toLowerCase().equals(country.toLowerCase()))
-                .findFirst();
-        if (!countrySearch.isPresent()) {
-            return null;
-        }
-        int countryId = countrySearch.get().getId();
-
-        GetCitiesResponse citiesResponse = null;
-        try {
-            citiesResponse = vk.database().getCities(actor, countryId).q(city).count(1).execute();
-        } catch (ApiException | ClientException e) {
-            e.printStackTrace();
-            return null;
-        }
-        if (citiesResponse.getItems().isEmpty()) {
-            return null;
+        /** TODO: создать десериализатор в GroupInfo */
+        List<GroupFull> groups = gson.fromJson(response, new TypeToken<List<GroupFull>>(){}.getType());
+        if ((groups == null) || (groups.isEmpty())) {
+            return new ArrayList<>();
         }
 
-        return citiesResponse.getItems().get(0).getId();
+        return groups.stream().map(a -> GroupInfo.fromGroupFull(a)).collect(Collectors.toList());
     }
 
     public Double compareGroups(UserActor actor, GroupFull group1, GroupFull group2) throws VkException {

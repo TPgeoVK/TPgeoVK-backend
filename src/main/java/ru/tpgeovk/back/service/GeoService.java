@@ -45,6 +45,7 @@ public class GeoService {
         try {
             geoResponse = request.await();
         } catch (ApiException | InterruptedException | IOException e) {
+            e.printStackTrace();
             throw new GoogleException(e);
         }
 
@@ -54,7 +55,7 @@ public class GeoService {
 
         int length = geoResponse[0].addressComponents.length;
         String city = geoResponse[0].addressComponents[0].shortName;
-        String country = geoResponse[0].addressComponents[length-1].shortName;
+        String country = geoResponse[0].addressComponents[length-1].longName;
 
         return new CityCountry(city, country);
     }
@@ -62,7 +63,7 @@ public class GeoService {
     public Integer resolveCityId(String city, String country, UserActor actor) throws VkException {
         GetCountriesResponse countriesResponse;
         try {
-            /** TODO: move to LevelDB */
+            /** TODO: закэшировать в key-value хранилище */
             countriesResponse = vk.database().getCountries(actor).execute();
         } catch (com.vk.api.sdk.exceptions.ApiException | ClientException e) {
             throw new VkException(e.getMessage(), e);
@@ -95,6 +96,6 @@ public class GeoService {
             return null;
         }
 
-        return resolveCityId(cityCountry.getCity(), cityCountry.getCity(), actor);
+        return resolveCityId(cityCountry.getCity(), cityCountry.getCountry(), actor);
     }
 }
