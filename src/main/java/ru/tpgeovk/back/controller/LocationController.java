@@ -25,7 +25,7 @@ public class LocationController {
         this.placeService = placeDetectionService;
     }
 
-    @RequestMapping(path = "/location/predictPlace", method = RequestMethod.POST, consumes = "application/json")
+    @RequestMapping(path = "/location/detectPlace", method = RequestMethod.POST, consumes = "application/json")
     public ResponseEntity getPredictedPlace(@RequestBody PredictRequest request) {
 
         Integer userId = tokenService.getUserId(request.getToken());
@@ -41,11 +41,11 @@ public class LocationController {
                     request.getText(), actor);
         } catch (VkException e) {
             e.printStackTrace();
-            return ResponseEntity.ok(new ErrorResponse(e.getMessage()));
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
 
         if (places == null) {
-            return ResponseEntity.ok(new ErrorResponse("No places near your location!"));
+            return ResponseEntity.badRequest().body(new ErrorResponse("No places near your location!"));
         }
 
         PlaceInfo predictedPlace = placeService.predictPlace(places);

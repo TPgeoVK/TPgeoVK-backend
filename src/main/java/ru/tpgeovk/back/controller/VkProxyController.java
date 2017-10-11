@@ -34,7 +34,7 @@ public class VkProxyController {
 
         Integer userId = tokenService.getUserId(token);
         if (userId == null) {
-            return ResponseEntity.ok(new ErrorResponse("Unknown token received"));
+            return ResponseEntity.badRequest().body(new ErrorResponse("Unknown token received"));
         }
         UserActor actor = new UserActor(userId, token);
 
@@ -42,7 +42,7 @@ public class VkProxyController {
         try {
             result = vkService.getAllUserCheck(actor);
         } catch (VkException e) {
-            return ResponseEntity.ok(new ErrorResponse(e.getMessage()));
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
 
         return ResponseEntity.ok(result);
@@ -59,12 +59,12 @@ public class VkProxyController {
             latitude = Float.parseFloat(lat);
             longitude = Float.parseFloat(lon);
         } catch (NumberFormatException e) {
-            return ResponseEntity.ok(new ErrorResponse("Wrong coordinates values!"));
+            return ResponseEntity.badRequest().body(new ErrorResponse("Wrong coordinates values!"));
         }
 
         Integer userId = tokenService.getUserId(token);
         if (userId == null) {
-            return ResponseEntity.ok(new ErrorResponse("Unknown token received"));
+            return ResponseEntity.badRequest().body(new ErrorResponse("Unknown token received"));
         }
         UserActor actor = new UserActor(userId, token);
 
@@ -72,7 +72,7 @@ public class VkProxyController {
         try {
             result = vkService.getLatestCheckins(actor, latitude, longitude);
         } catch (VkException e) {
-            return ResponseEntity.ok(new ErrorResponse(e.getMessage()));
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
 
         return ResponseEntity.ok(result);

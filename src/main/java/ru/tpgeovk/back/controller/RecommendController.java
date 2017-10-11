@@ -45,7 +45,7 @@ public class RecommendController {
 
             return ResponseEntity.ok(result);
         } catch (GoogleException | VkException e) {
-            return ResponseEntity.ok(new ErrorResponse(e.getMessage()));
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
     }
 }

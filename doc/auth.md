@@ -1,0 +1,3 @@
+# Авторизация
+---
+Для необходимо загрузить страницу по адресу [http://tp2017.park.bmstu.cloud/tpgeovk/auth](http://tp2017.park.bmstu.cloud/tpgeovk/auth), после чего произойдет перенаправление на страницу авторизации VK API, где необходимо произвести вход в аккаунт VK. В случае успеха, пользователь будет перенаправлен на страницу *http://tp2017.park.bmstu.cloud/tpgeovk/auth/callback/success?token=<токен пользователя>*, а в случае ошибки - на страницу *http://tp2017.park.bmstu.cloud/tpgeovk/auth/callback/error?message=<сообщение об ошибке>*.
