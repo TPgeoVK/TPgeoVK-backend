@@ -10,6 +10,8 @@ public class CheckinInfo {
     private String checkinId;
     private Integer postId;
     private String date;
+    private Integer likes;
+    private Integer reposts;
     private Float latitude;
     private Float longitude;
     private String text;
@@ -23,6 +25,8 @@ public class CheckinInfo {
         result.setPostId(postFull.getId());
         result.setDate(postFull.getDate().toString());
         result.setText(postFull.getText());
+        result.setLikes(postFull.getLikes().getCount());
+        result.setReposts(postFull.getReposts().getCount());
         String[] coordinates = postFull.getGeo().getCoordinates().split(" ");
         result.setLatitude(Float.parseFloat(coordinates[0]));
         result.setLongitude(Float.parseFloat(coordinates[1]));
@@ -50,6 +54,8 @@ public class CheckinInfo {
         result.setPostId(postFull.getId());
         result.setDate(postFull.getDate().toString());
         result.setText(postFull.getText());
+        result.setLikes(postFull.getLikes().getCount());
+        result.setReposts(postFull.getReposts().getCount());
         String[] coordinates = postFull.getGeo().getCoordinates().split(" ");
         result.setLatitude(Float.parseFloat(coordinates[0]));
         result.setLongitude(Float.parseFloat(coordinates[1]));
@@ -134,5 +140,13 @@ public class CheckinInfo {
     public PlaceInfo getPlace() { return place; }
 
     public void setPlace(PlaceInfo place) { this.place = place; }
+
+    public Integer getLikes() { return likes; }
+
+    public void setLikes(Integer likes) { this.likes = likes; }
+
+    public Integer getReposts() { return reposts; }
+
+    public void setReposts(Integer reposts) { this.reposts = reposts; }
 }
 
