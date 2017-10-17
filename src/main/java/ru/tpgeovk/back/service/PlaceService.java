@@ -13,7 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.tpgeovk.back.contexts.VkContext;
 import ru.tpgeovk.back.exception.VkException;
-import ru.tpgeovk.back.model.PlaceInfo;
+import ru.tpgeovk.back.model.FullPlaceInfo;
 import ru.tpgeovk.back.text.TextProcessor;
 
 import java.util.Comparator;
@@ -35,7 +35,7 @@ public class PlaceService {
         vk = VkContext.getVkApiClient();
     }
 
-    public List<PlaceInfo> getPlaces(Float lat, Float lon, String text, UserActor actor)
+    public List<FullPlaceInfo> getPlaces(Float lat, Float lon, String text, UserActor actor)
             throws VkException {
 
         /** Получаем все места в радиусе 300 метров */
@@ -48,10 +48,10 @@ public class PlaceService {
             throw new VkException(e);
         }
 
-        /** Сортируем по расстоянию и преобразовываем в PlaceInfo */
-        List<PlaceInfo> places = response.getItems().stream()
+        /** Сортируем по расстоянию и преобразовываем в FullPlaceInfo */
+        List<FullPlaceInfo> places = response.getItems().stream()
                 .sorted(Comparator.comparing(PlaceFull::getDistance))
-                .map(PlaceInfo::fromPlaceFull)
+                .map(FullPlaceInfo::fromPlaceFull)
                 .collect(Collectors.toList());
 
         /** Получаем список друзей пользователя */
@@ -67,7 +67,7 @@ public class PlaceService {
         GetCheckinsResponse checkinsResponse = null;
         try {
             /** Считаем количество чекинов друзей и пользователя в каждом месте */
-            for (PlaceInfo place : places) {
+            for (FullPlaceInfo place : places) {
                 /** Issue #80 */
                 /*checkinsResponse = vk.places().getCheckins(actor)
                         .place(place.getId())
@@ -93,7 +93,7 @@ public class PlaceService {
         return places;
     }
 
-    public  PlaceInfo predictPlace(List<PlaceInfo> places) {
-        return places.stream().max(Comparator.comparing(PlaceInfo::calculateRating)).get();
+    public FullPlaceInfo predictPlace(List<FullPlaceInfo> places) {
+        return places.stream().max(Comparator.comparing(FullPlaceInfo::calculateRating)).get();
     }
 }

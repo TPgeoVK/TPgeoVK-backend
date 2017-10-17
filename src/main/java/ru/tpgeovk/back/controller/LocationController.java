@@ -5,7 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ru.tpgeovk.back.exception.VkException;
-import ru.tpgeovk.back.model.PlaceInfo;
+import ru.tpgeovk.back.model.FullPlaceInfo;
 import ru.tpgeovk.back.model.request.PredictRequest;
 import ru.tpgeovk.back.model.response.ErrorResponse;
 import ru.tpgeovk.back.service.PlaceService;
@@ -34,7 +34,7 @@ public class LocationController {
         }
         UserActor actor = new UserActor(userId, request.getToken());
 
-        List<PlaceInfo> places = null;
+        List<FullPlaceInfo> places = null;
 
         try {
             places = placeService.getPlaces(request.getLatitude(), request.getLongitude(),
@@ -48,7 +48,7 @@ public class LocationController {
             return ResponseEntity.badRequest().body(new ErrorResponse("No places near your location!"));
         }
 
-        PlaceInfo predictedPlace = placeService.predictPlace(places);
+        FullPlaceInfo predictedPlace = placeService.predictPlace(places);
 
         return ResponseEntity.ok(predictedPlace);
     }

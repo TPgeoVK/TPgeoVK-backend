@@ -2,24 +2,24 @@ package ru.tpgeovk.back.model;
 
 import com.vk.api.sdk.objects.base.Place;
 import com.vk.api.sdk.objects.places.Checkin;
+import com.vk.api.sdk.objects.users.UserFull;
 import com.vk.api.sdk.objects.wall.WallpostFull;
 
 public class CheckinInfo {
 
     private String checkinId;
-    private Integer userId;
     private Integer postId;
     private String date;
     private Float latitude;
     private Float longitude;
     private String text;
-    private Integer placeId;
-    private String placeTitle;
+
+    private UserInfo user;
+    private PlaceInfo place;
 
     public static CheckinInfo fromPostFull(WallpostFull postFull) {
         CheckinInfo result = new CheckinInfo();
         result.setCheckinId(postFull.getFromId().toString() + "_" + postFull.getId().toString());
-        result.setUserId(postFull.getFromId());
         result.setPostId(postFull.getId());
         result.setDate(postFull.getDate().toString());
         result.setText(postFull.getText());
@@ -27,16 +27,57 @@ public class CheckinInfo {
         result.setLatitude(Float.parseFloat(coordinates[0]));
         result.setLongitude(Float.parseFloat(coordinates[1]));
 
+        UserInfo userInfo = new UserInfo();
+        userInfo.setId(postFull.getFromId());
+
         Place place = postFull.getGeo().getPlace();
         if ((place != null) && (!place.getId().equals(0))) {
-            result.setPlaceId(place.getId());
-            result.setPlaceTitle(place.getTitle());
+            PlaceInfo placeInfo = new PlaceInfo(
+                    place.getId(),
+                    place.getTitle(),
+                    place.getLongitude(),
+                    place.getLatitude(),
+                    place.getIcon());
+            result.setPlace(placeInfo);
         }
 
         return result;
     }
 
-    public CheckinInfo() { }
+    public static CheckinInfo fromPostAndUser(WallpostFull postFull, UserFull userFull) {
+        CheckinInfo result = new CheckinInfo();
+        result.setCheckinId(postFull.getFromId().toString() + "_" + postFull.getId().toString());
+        result.setPostId(postFull.getId());
+        result.setDate(postFull.getDate().toString());
+        result.setText(postFull.getText());
+        String[] coordinates = postFull.getGeo().getCoordinates().split(" ");
+        result.setLatitude(Float.parseFloat(coordinates[0]));
+        result.setLongitude(Float.parseFloat(coordinates[1]));
+
+        UserInfo userInfo = new UserInfo(
+                userFull.getId(),
+                userFull.getFirstName(),
+                userFull.getLastName(),
+                userFull.getPhoto200()
+        );
+        result.setUser(userInfo);
+
+        Place place = postFull.getGeo().getPlace();
+        if ((place != null) && (!place.getId().equals(0))) {
+            PlaceInfo placeInfo = new PlaceInfo(
+                    place.getId(),
+                    place.getTitle(),
+                    place.getLongitude(),
+                    place.getLatitude(),
+                    place.getIcon());
+            result.setPlace(placeInfo);
+        }
+
+        return result;
+    }
+
+    public CheckinInfo() {
+    }
 
     public String getCheckinId() {
         return checkinId;
@@ -44,14 +85,6 @@ public class CheckinInfo {
 
     public void setCheckinId(String checkinId) {
         this.checkinId = checkinId;
-    }
-
-    public Integer getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Integer userId) {
-        this.userId = userId;
     }
 
     public Integer getPostId() {
@@ -94,19 +127,12 @@ public class CheckinInfo {
         this.text = text;
     }
 
-    public Integer getPlaceId() {
-        return placeId;
-    }
+    public UserInfo getUser() { return user; }
 
-    public void setPlaceId(Integer placeId) {
-        this.placeId = placeId;
-    }
+    public void setUser(UserInfo user) { this.user = user; }
 
-    public String getPlaceTitle() {
-        return placeTitle;
-    }
+    public PlaceInfo getPlace() { return place; }
 
-    public void setPlaceTitle(String placeTitle) {
-        this.placeTitle = placeTitle;
-    }
+    public void setPlace(PlaceInfo place) { this.place = place; }
 }
+
