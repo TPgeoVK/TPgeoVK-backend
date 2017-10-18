@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ru.tpgeovk.back.exception.VkException;
 import ru.tpgeovk.back.model.CheckinInfo;
+import ru.tpgeovk.back.model.UserInfo;
 import ru.tpgeovk.back.model.response.ErrorResponse;
 import ru.tpgeovk.back.service.TokenService;
 import ru.tpgeovk.back.service.VkProxyService;
@@ -27,6 +28,25 @@ public class VkProxyController {
                           VkProxyService vkService) {
         this.tokenService = tokenService;
         this.vkService = vkService;
+    }
+
+    @RequestMapping(path = "/vkapi/user", method = RequestMethod.GET)
+    public ResponseEntity getUser(@RequestParam(value = "token") String token) {
+
+        Integer userId = tokenService.getUserId(token);
+        if (userId == null) {
+            return ResponseEntity.badRequest().body(new ErrorResponse("Unknown token received"));
+        }
+        UserActor actor = new UserActor(userId, token);
+
+        UserInfo result;
+        try {
+            result = vkService.getUser(actor);
+        } catch (VkException e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        }
+
+        return ResponseEntity.ok(result);
     }
 
     @RequestMapping(path = "/vkapi/checkins/all", method = RequestMethod.GET)

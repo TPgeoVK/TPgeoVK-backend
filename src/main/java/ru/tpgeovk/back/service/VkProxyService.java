@@ -40,7 +40,24 @@ public class VkProxyService {
         gson = new GsonBuilder().create();
     }
 
+    public UserInfo getUser(UserActor actor) throws VkException {
+        List<UserXtrCounters> usersResponse;
+        try {
+            usersResponse = vk.users().get(actor).userIds(actor.getId().toString())
+                    .fields(UserField.PHOTO_200).execute();
+        } catch (ApiException | ClientException e) {
+            e.printStackTrace();
+            throw new VkException(e.getMessage(), e);
+        }
+
+        return new UserInfo(usersResponse.get(0).getId(),
+                            usersResponse.get(0).getFirstName(),
+                            usersResponse.get(0).getLastName(),
+                            usersResponse.get(0).getPhoto200());
+    }
+
     public List<CheckinInfo> getAllUserCheck(UserActor actor) throws VkException {
+        /** TODO: replace with private static final String */
         StringBuilder scriptBuilder = new StringBuilder();
         scriptBuilder.append(
                 "var checkins = API.places.getCheckins({\"user_id\":" + actor.getId().toString() + ",\"count\":100});\n")
@@ -56,10 +73,9 @@ public class VkProxyService {
         .append("checkins = API.places.getCheckins({\"user_id\":" + actor.getId().toString() + ",\"count\":100, " +
                 "\"offset\":offset});\n")
         .append("}\n}\n")
-        .append("var user = API.users.get({\"user_ids\":" + actor.getId().toString() + ",\"fields\":\"photo_200\"});\n")
-        .append("if (allCheckins.length == 0) { return [[],user]; }\n")
+        .append("if (allCheckins.length == 0) { return []; }\n")
         .append("var posts = API.wall.getById({\"posts\":allCheckins@.id});\n")
-        .append("return [posts,user];");
+        .append("return posts;");
 
         String script = scriptBuilder.toString();
 
@@ -73,15 +89,13 @@ public class VkProxyService {
 
         List<WallpostFull> posts;
         if (response.getAsJsonArray().size() != 0) {
-            posts = Arrays.asList(gson.fromJson(response.getAsJsonArray().get(0), WallpostFull[].class));
+            posts = Arrays.asList(gson.fromJson(response, WallpostFull[].class));
         }
         else {
-            posts = new ArrayList<>();
+            return new ArrayList<>();
         }
 
-        UserFull user = gson.fromJson(response.getAsJsonArray().get(1).getAsJsonArray().get(0), UserFull.class);
-
-        return posts.stream().map(a -> CheckinInfo.fromPostAndUser(a, user)).collect(Collectors.toList());
+        return posts.stream().map(a -> CheckinInfo.fromPostFull(a)).collect(Collectors.toList());
     }
 
     public List<CheckinInfo> getLatestCheckins(UserActor actor, Float latitude, Float longitude) throws VkException {

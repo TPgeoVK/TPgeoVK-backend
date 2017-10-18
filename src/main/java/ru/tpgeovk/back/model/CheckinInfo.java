@@ -9,11 +9,10 @@ public class CheckinInfo {
 
     private String checkinId;
     private Integer postId;
+    private Integer userId;
     private String date;
     private Integer likes;
     private Integer reposts;
-    private Float latitude;
-    private Float longitude;
     private String text;
 
     private UserInfo user;
@@ -23,25 +22,43 @@ public class CheckinInfo {
         CheckinInfo result = new CheckinInfo();
         result.setCheckinId(postFull.getFromId().toString() + "_" + postFull.getId().toString());
         result.setPostId(postFull.getId());
+        result.setUserId(postFull.getFromId());
         result.setDate(postFull.getDate().toString());
         result.setText(postFull.getText());
         result.setLikes(postFull.getLikes().getCount());
         result.setReposts(postFull.getReposts().getCount());
-        String[] coordinates = postFull.getGeo().getCoordinates().split(" ");
-        result.setLatitude(Float.parseFloat(coordinates[0]));
-        result.setLongitude(Float.parseFloat(coordinates[1]));
 
-        UserInfo userInfo = new UserInfo();
-        userInfo.setId(postFull.getFromId());
+        if (postFull.getGeo() != null) {
+            Place place = postFull.getGeo().getPlace();
+            if (place != null) {
+                if (!place.getId().equals(0)) {
+                    PlaceInfo placeInfo = new PlaceInfo(
+                            place.getId(),
+                            place.getTitle(),
+                            place.getLongitude(),
+                            place.getLatitude(),
+                            place.getIcon());
+                    result.setPlace(placeInfo);
 
-        Place place = postFull.getGeo().getPlace();
-        if ((place != null) && (!place.getId().equals(0))) {
-            PlaceInfo placeInfo = new PlaceInfo(
-                    place.getId(),
-                    place.getTitle(),
-                    place.getLongitude(),
-                    place.getLatitude(),
-                    place.getIcon());
+                    return result;
+                }
+                else {
+                    PlaceInfo placeInfo = new PlaceInfo();
+                    placeInfo.setId(0);
+                    placeInfo.setTitle(place.getTitle());
+                    String[] coordinates = postFull.getGeo().getCoordinates().split(" ");
+                    placeInfo.setLatitude(Float.parseFloat(coordinates[0]));
+                    placeInfo.setLongitude(Float.parseFloat(coordinates[1]));
+                    result.setPlace(placeInfo);
+
+                    return result;
+                }
+            }
+
+            PlaceInfo placeInfo = new PlaceInfo();
+            String[] coordinates = postFull.getGeo().getCoordinates().split(" ");
+            placeInfo.setLatitude(Float.parseFloat(coordinates[0]));
+            placeInfo.setLongitude(Float.parseFloat(coordinates[1]));
             result.setPlace(placeInfo);
         }
 
@@ -49,16 +66,7 @@ public class CheckinInfo {
     }
 
     public static CheckinInfo fromPostAndUser(WallpostFull postFull, UserFull userFull) {
-        CheckinInfo result = new CheckinInfo();
-        result.setCheckinId(postFull.getFromId().toString() + "_" + postFull.getId().toString());
-        result.setPostId(postFull.getId());
-        result.setDate(postFull.getDate().toString());
-        result.setText(postFull.getText());
-        result.setLikes(postFull.getLikes().getCount());
-        result.setReposts(postFull.getReposts().getCount());
-        String[] coordinates = postFull.getGeo().getCoordinates().split(" ");
-        result.setLatitude(Float.parseFloat(coordinates[0]));
-        result.setLongitude(Float.parseFloat(coordinates[1]));
+        CheckinInfo result = CheckinInfo.fromPostFull(postFull);
 
         UserInfo userInfo = new UserInfo(
                 userFull.getId(),
@@ -68,22 +76,10 @@ public class CheckinInfo {
         );
         result.setUser(userInfo);
 
-        Place place = postFull.getGeo().getPlace();
-        if ((place != null) && (!place.getId().equals(0))) {
-            PlaceInfo placeInfo = new PlaceInfo(
-                    place.getId(),
-                    place.getTitle(),
-                    place.getLongitude(),
-                    place.getLatitude(),
-                    place.getIcon());
-            result.setPlace(placeInfo);
-        }
-
         return result;
     }
 
-    public CheckinInfo() {
-    }
+    public CheckinInfo() { }
 
     public String getCheckinId() {
         return checkinId;
@@ -101,28 +97,16 @@ public class CheckinInfo {
         this.postId = postId;
     }
 
+    public Integer getUserId() { return userId; }
+
+    public void setUserId(Integer userId) { this.userId = userId; }
+
     public String getDate() {
         return date;
     }
 
     public void setDate(String date) {
         this.date = date;
-    }
-
-    public Float getLatitude() {
-        return latitude;
-    }
-
-    public void setLatitude(Float latitude) {
-        this.latitude = latitude;
-    }
-
-    public Float getLongitude() {
-        return longitude;
-    }
-
-    public void setLongitude(Float longitude) {
-        this.longitude = longitude;
     }
 
     public String getText() {

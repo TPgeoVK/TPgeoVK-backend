@@ -13,6 +13,7 @@ import com.vk.api.sdk.objects.database.responses.GetCitiesResponse;
 import com.vk.api.sdk.objects.database.responses.GetCountriesResponse;
 import com.vk.api.sdk.objects.friends.responses.GetResponse;
 import com.vk.api.sdk.objects.groups.GroupFull;
+import com.vk.api.sdk.objects.places.responses.GetCheckinsResponse;
 import com.vk.api.sdk.queries.groups.GroupsGetMembersFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,10 @@ public class RecommendationService {
 
     private static final String SCRIPT_EVENTS = "var events = API.groups.search({\"q\":\"*\",\"cityId\":%d,\"count\":25,\"type\":\"event\",\"future\":true,});\n" +
             "var eventIds = events.items@.id;\nreturn API.groups.getById({\"group_ids\":eventIds,\"fields\":\"description,members_count,place\"});\n";
+
+    //private static final String CHECKINS_USERS = "var userCheckins = API.places.getCheckins({\"user_id\":%d});\n" +
+            //"if (userCheckins.length == 0) { return []; }\n" +
+            //"var placeIds = [];\n for (i"
 
     private final VkApiClient vk;
 
@@ -74,6 +79,19 @@ public class RecommendationService {
         }
 
         return events.stream().filter(a -> !a.getFriendsCount().equals(0)).collect(Collectors.toList());
+    }
+
+    public List<GroupInfo> recommendGroupsByCheckins(UserActor actor) throws VkException {
+
+        GetCheckinsResponse response;
+        try {
+            response = vk.places().getCheckins(actor).userId(actor.getId()).execute();
+        } catch (ApiException | ClientException e) {
+            e.printStackTrace();
+            throw new VkException(e.getMessage(), e);
+        }
+
+        return null;
     }
 
     public List<GroupInfo> getEventsInCity(Float latitude, Float longitude, UserActor actor) throws VkException,
