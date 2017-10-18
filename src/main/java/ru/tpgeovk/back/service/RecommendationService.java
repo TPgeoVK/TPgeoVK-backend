@@ -13,6 +13,7 @@ import com.vk.api.sdk.objects.database.responses.GetCitiesResponse;
 import com.vk.api.sdk.objects.database.responses.GetCountriesResponse;
 import com.vk.api.sdk.objects.friends.responses.GetResponse;
 import com.vk.api.sdk.objects.groups.GroupFull;
+import com.vk.api.sdk.objects.places.Checkin;
 import com.vk.api.sdk.objects.places.responses.GetCheckinsResponse;
 import com.vk.api.sdk.queries.groups.GroupsGetMembersFilter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,9 +33,34 @@ public class RecommendationService {
     private static final String SCRIPT_EVENTS = "var events = API.groups.search({\"q\":\"*\",\"cityId\":%d,\"count\":25,\"type\":\"event\",\"future\":true,});\n" +
             "var eventIds = events.items@.id;\nreturn API.groups.getById({\"group_ids\":eventIds,\"fields\":\"description,members_count,place\"});\n";
 
-    //private static final String CHECKINS_USERS = "var userCheckins = API.places.getCheckins({\"user_id\":%d});\n" +
-            //"if (userCheckins.length == 0) { return []; }\n" +
-            //"var placeIds = [];\n for (i"
+    private static final String USER_CHECKINS = "var userId = %d;\n " +
+            "var userCheckins = API.places.getCheckins({\"user_id\":userId}).items;\n" +
+            "if (userCheckins.length == 0) { return []; }\n" +
+            "var offset = 20;\n" +
+            "var offsetCheckins = API.places.getCheckins({\"user_id\":userId,\"offset\":offset});\n" +
+            "while (offsetCheckins.items.length != 0) {\n" +
+            "userCheckins = userCheckins + offsetCheckins.items;\n" +
+            "offset = offset + 20;\n}\n" +
+            "return userCheckins;";
+
+    private static final String PLACE_CHECKINS = "var placeId = %d;\n" +
+            "var users = API.places.getCheckins({\"place\":placeId}).items@.user_id;\n" +
+            "var offset = 20;\n" +
+            "var offsetCheckins = API.places.getCheckins({\"place\":placeId,\"offset\":offset});\n" +
+            "while (offsetCheckins.items.length != 0) {\n" +
+            "users = users + offsetCheckins.items.@userId;\n" +
+            "offset = offset + 20;\n}\n" +
+            "return users;";
+
+    private static final String COORD_CHECKINS = "var lat = %d;\nvar lon = %d;\n" +
+            "var users = API.places.getCheckins({\"latitude\":lat,\"longitude\":lon}).items@.user_id;\n" +
+            "var offset = 20;\n" +
+            "var offsetCheckins = API.places.getCheckins({\"latitude\":lat,\"longitude\":lon,\"offset\":offset});\n" +
+            "while (offsetCheckins.items.length != 0) {\n" +
+            "users = users + offsetCheckins.items.@userId;\n" +
+            "offset = offset + 20;\n}\n" +
+            "return users;";
+
 
     private final VkApiClient vk;
 
@@ -81,17 +107,45 @@ public class RecommendationService {
         return events.stream().filter(a -> !a.getFriendsCount().equals(0)).collect(Collectors.toList());
     }
 
-    public List<GroupInfo> recommendGroupsByCheckins(UserActor actor) throws VkException {
-
-        GetCheckinsResponse response;
+    public List<Integer> getUsersFromCheckins(UserActor actor) throws VkException {
+        JsonElement response;
         try {
-            response = vk.places().getCheckins(actor).userId(actor.getId()).execute();
+            response = vk.execute().code(actor, String.format(USER_CHECKINS, actor.getId())).execute();
         } catch (ApiException | ClientException e) {
             e.printStackTrace();
             throw new VkException(e.getMessage(), e);
         }
 
-        return null;
+        if (response.getAsJsonArray().size() == 0) {
+            return new ArrayList<>();
+        }
+
+        List<Integer> users = new ArrayList<>();
+
+        List<Checkin> userCheckins = gson.fromJson(response, new TypeToken<Checkin>(){}.getType());
+        for (Checkin checkin : userCheckins) {
+            if (!checkin.getPlaceId().equals(0)) {
+                try {
+                    response = vk.execute().code(actor, String.format(PLACE_CHECKINS, checkin.getPlaceId())).execute();
+                } catch (ApiException | ClientException e) {
+                    e.printStackTrace();
+                    throw new VkException(e.getMessage(), e);
+                }
+                users.addAll(gson.fromJson(response, new TypeToken<Integer>(){}.getType()));
+            }
+            else {
+                try {
+                    response = vk.execute().code(actor, String.format(COORD_CHECKINS, checkin.getLatitude(),
+                            checkin.getLongitude())).execute();
+                } catch (ApiException | ClientException e) {
+                    e.printStackTrace();
+                    throw new VkException(e.getMessage(), e);
+                }
+                users.addAll(gson.fromJson(response, new TypeToken<Integer>(){}.getType()));
+            }
+        }
+
+        return users;
     }
 
     public List<GroupInfo> getEventsInCity(Float latitude, Float longitude, UserActor actor) throws VkException,
