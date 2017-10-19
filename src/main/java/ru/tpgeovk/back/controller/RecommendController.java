@@ -15,6 +15,7 @@ import ru.tpgeovk.back.service.RecommendationService;
 import ru.tpgeovk.back.service.TokenService;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 public class RecommendController {
@@ -59,7 +60,8 @@ public class RecommendController {
         UserActor actor = new UserActor(userId, token);
 
         try {
-            List<Integer> result = recommendationService.getUsersFromCheckins(actor);
+            List<Integer> users = recommendationService.getUsersFromCheckins(actor);
+            Map<Integer, Integer> result = recommendationService.getSimilarUsers(actor, users);
             return ResponseEntity.ok(result);
         } catch (VkException e) {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));

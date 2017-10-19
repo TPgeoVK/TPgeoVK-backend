@@ -1,8 +1,6 @@
 package ru.tpgeovk.back.service;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
+import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.UserActor;
@@ -15,6 +13,7 @@ import com.vk.api.sdk.objects.friends.responses.GetResponse;
 import com.vk.api.sdk.objects.groups.GroupFull;
 import com.vk.api.sdk.objects.places.Checkin;
 import com.vk.api.sdk.objects.places.responses.GetCheckinsResponse;
+import com.vk.api.sdk.queries.groups.GroupsGetFilter;
 import com.vk.api.sdk.queries.groups.GroupsGetMembersFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -69,6 +68,15 @@ public class RecommendationService {
             "}\n" +
             "return users;";
 
+    private static final String GROUP_MEMBERS = "var groups = %s;\n var users = %s;\n" +
+            "var i = 0;\n" +
+            "var res = [];\n" +
+            "var group;\n" +
+            "while (i < groups.length) {\n" +
+            "group = groups[i];\n" +
+            "res = res + [{\"groupId\": group,\"members\": API.groups.isMember({\"group_id\": group,\"user_ids\": users})}];\n" +
+            "i = i + 1;\n" +
+            "}\nreturn res;";
 
     private final VkApiClient vk;
 
@@ -153,6 +161,72 @@ public class RecommendationService {
         }
 
         return users;
+    }
+
+    public Map<Integer, Integer> getSimilarUsers(UserActor actor, List<Integer> userIds) throws VkException {
+        Map<Integer, Integer> commonGroups = new HashMap<>();
+        com.vk.api.sdk.objects.groups.responses.GetResponse groupsResponse;
+        for (Integer id : userIds) {
+            commonGroups.put(id, 0);
+        }
+        try {
+            groupsResponse = vk.groups().get(actor).userId(actor.getId()).count(200).execute();
+        } catch (ApiException | ClientException e) {
+            e.printStackTrace();
+            throw new VkException(e.getMessage(), e);
+        }
+        List<Integer> groups = groupsResponse.getItems();
+
+        int groupStart = 0;
+        int groupEnd = 25;
+        String script;
+        JsonElement response;
+        while (groupStart <= groups.size()) {
+            if (groupEnd >= groups.size()) {
+                groupEnd = groups.size() - 1;
+            }
+            List<Integer> subGroups = groups.subList(groupStart, groupEnd);
+            groupStart = groupStart + 25;
+            groupEnd = groupEnd + 25;
+
+            int usersStart = 0;
+            int usersEnd = 500;
+            while (usersStart < userIds.size()) {
+                if (usersEnd >= userIds.size()) {
+                    usersEnd = userIds.size() - 1;
+                }
+                List<Integer> subUsers = userIds.subList(usersStart, usersEnd);
+                usersStart = usersStart + 500;
+                usersEnd =usersEnd + 500;
+
+                script = String.format(GROUP_MEMBERS, subGroups.toString(), subUsers.toString());
+                try {
+                    response = vk.execute().code(actor, script).execute();
+                } catch (ApiException | ClientException e) {
+                    e.printStackTrace();
+                    throw new VkException(e.getMessage(), e);
+                }
+
+                if (response.getAsJsonArray().size() != 0) {
+                    JsonArray groupsArray = response.getAsJsonArray();
+                    for (JsonElement group : groupsArray) {
+                        JsonObject groupObject = group.getAsJsonObject();
+                        Integer groupId = groupObject.getAsJsonPrimitive("groupId").getAsInt();
+                        for (JsonElement member : groupObject.getAsJsonArray("members")) {
+                            JsonObject memberObject = member.getAsJsonObject();
+                            Integer userId = memberObject.getAsJsonPrimitive("user_id")
+                                    .getAsInt();
+                            Integer count = commonGroups.get(userId);
+                            if (memberObject.getAsJsonPrimitive("member").getAsInt() == 1) {
+                                commonGroups.put(userId, count+1);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return commonGroups;
     }
 
     public List<GroupInfo> getEventsInCity(Float latitude, Float longitude, UserActor actor) throws VkException,
