@@ -21,7 +21,9 @@ import org.springframework.stereotype.Service;
 import ru.tpgeovk.back.contexts.VkContext;
 import ru.tpgeovk.back.exception.GoogleException;
 import ru.tpgeovk.back.exception.VkException;
+import ru.tpgeovk.back.model.CheckinInfo;
 import ru.tpgeovk.back.model.GroupInfo;
+import ru.tpgeovk.back.model.VkCheckin;
 import ru.tpgeovk.back.text.TextProcessor;
 
 import java.util.*;
@@ -44,21 +46,27 @@ public class RecommendationService {
             "return userCheckins;";
 
     private static final String PLACE_CHECKINS = "var placeId = %d;\n" +
-            "var users = API.places.getCheckins({\"place\":placeId}).items@.user_id;\n" +
+            "var checkins = API.places.getCheckins({\"place\":placeId});\n" +
+            "var users = checkins.items@.user_id;\n" +
+            "var total = checkins.count;\n" +
+            "if (total <= 20) { return users; }\n" +
             "var offset = 20;\n" +
-            "var offsetCheckins = API.places.getCheckins({\"place\":placeId,\"offset\":offset});\n" +
-            "while (offsetCheckins.items.length != 0) {\n" +
-            "users = users + offsetCheckins.items.@userId;\n" +
-            "offset = offset + 20;\n}\n" +
+            "while ((offset < (total-20)) && (offset <= 400)) {\n" +
+            "offset = offset + 20;\n" +
+            "users = users + API.places.getCheckins({\"place\":placeId,\"offset\":offset}).items@.user_id;\n" +
+            "}\n" +
             "return users;";
 
-    private static final String COORD_CHECKINS = "var lat = %d;\nvar lon = %d;\n" +
-            "var users = API.places.getCheckins({\"latitude\":lat,\"longitude\":lon}).items@.user_id;\n" +
+    private static final String COORD_CHECKINS = "var lat = %f;\nvar lon = %f;\n" +
+            "var checkins = API.places.getCheckins({\"latitude\":lat,\"longitude\":lon});\n" +
+            "var users = checkins.items@.user_id;\n" +
+            "var total = checkins.count;\n" +
+            "if (total <= 20) { return users; }\n" +
             "var offset = 20;\n" +
-            "var offsetCheckins = API.places.getCheckins({\"latitude\":lat,\"longitude\":lon,\"offset\":offset});\n" +
-            "while (offsetCheckins.items.length != 0) {\n" +
-            "users = users + offsetCheckins.items.@userId;\n" +
-            "offset = offset + 20;\n}\n" +
+            "while ((offset < (total-20)) && (offset <= 400)) {\n" +
+            "offset = offset + 20;\n" +
+            "users = users + API.places.getCheckins({\"latitude\":lat,\"longitude\":lon,\"offset\":offset}).items@.user_id;\n" +
+            "}\n" +
             "return users;";
 
 
@@ -67,12 +75,14 @@ public class RecommendationService {
     private final Gson gson;
 
     private final GeoService geoService;
+    private final VkProxyService vkProxyService;
 
     @Autowired
-    public RecommendationService(GeoService geoService) {
+    public RecommendationService(GeoService geoService, VkProxyService vkProxyService) {
         vk = VkContext.getVkApiClient();
         gson = new GsonBuilder().create();
         this.geoService = geoService;
+        this.vkProxyService = vkProxyService;
     }
 
     public List<GroupInfo> recommendEventByFriends(Float latitude, Float longitude, UserActor actor)
@@ -108,40 +118,37 @@ public class RecommendationService {
     }
 
     public List<Integer> getUsersFromCheckins(UserActor actor) throws VkException {
-        JsonElement response;
-        try {
-            response = vk.execute().code(actor, String.format(USER_CHECKINS, actor.getId())).execute();
-        } catch (ApiException | ClientException e) {
-            e.printStackTrace();
-            throw new VkException(e.getMessage(), e);
-        }
-
-        if (response.getAsJsonArray().size() == 0) {
-            return new ArrayList<>();
-        }
-
+        List<CheckinInfo> userCheckins = vkProxyService.getAllUserCheck(actor);
         List<Integer> users = new ArrayList<>();
-
-        List<Checkin> userCheckins = gson.fromJson(response, new TypeToken<Checkin>(){}.getType());
-        for (Checkin checkin : userCheckins) {
-            if (!checkin.getPlaceId().equals(0)) {
+        String script;
+        JsonElement response;
+        for (CheckinInfo checkin : userCheckins) {
+            if (!checkin.getPlace().getId().equals(0)) {
                 try {
-                    response = vk.execute().code(actor, String.format(PLACE_CHECKINS, checkin.getPlaceId())).execute();
+                    /** Locale.US для точки вместо запятой при подстановке Float */
+                    script = String.format(Locale.US, PLACE_CHECKINS, checkin.getPlace().getId());
+                    response = vk.execute().code(actor, script).execute();
                 } catch (ApiException | ClientException e) {
                     e.printStackTrace();
                     throw new VkException(e.getMessage(), e);
                 }
-                users.addAll(gson.fromJson(response, new TypeToken<Integer>(){}.getType()));
+                if (response.getAsJsonArray().size() != 0) {
+                    users.addAll(gson.fromJson(response, new TypeToken<List<Integer>>() {}.getType()));
+                }
+
             }
             else {
                 try {
-                    response = vk.execute().code(actor, String.format(COORD_CHECKINS, checkin.getLatitude(),
-                            checkin.getLongitude())).execute();
+                    script = String.format(Locale.US, COORD_CHECKINS, checkin.getPlace().getLatitude(),
+                            checkin.getPlace().getLongitude());
+                    response = vk.execute().code(actor, script).execute();
                 } catch (ApiException | ClientException e) {
                     e.printStackTrace();
                     throw new VkException(e.getMessage(), e);
                 }
-                users.addAll(gson.fromJson(response, new TypeToken<Integer>(){}.getType()));
+                if (response.getAsJsonArray().size() != 0) {
+                    users.addAll(gson.fromJson(response, new TypeToken<List<Integer>>() {}.getType()));
+                }
             }
         }
 

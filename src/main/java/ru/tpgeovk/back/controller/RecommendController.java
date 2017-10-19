@@ -48,4 +48,21 @@ public class RecommendController {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
     }
+
+    @RequestMapping(path = "/recommend/groups/byCheckins", method = RequestMethod.GET)
+    public ResponseEntity getGroupByCheckins(@RequestParam(value = "token") String token) {
+
+        Integer userId = tokenService.getUserId(token);
+        if (token == null) {
+            return ResponseEntity.ok(new ErrorResponse("User not authenticated"));
+        }
+        UserActor actor = new UserActor(userId, token);
+
+        try {
+            List<Integer> result = recommendationService.getUsersFromCheckins(actor);
+            return ResponseEntity.ok(result);
+        } catch (VkException e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        }
+    }
 }
