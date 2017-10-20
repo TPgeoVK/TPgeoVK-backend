@@ -184,6 +184,9 @@ public class RecommendationService {
         while (groupStart <= groups.size()) {
             if (groupEnd >= groups.size()) {
                 groupEnd = groups.size() - 1;
+                if (groupStart > groupEnd) {
+                    groupStart = groupEnd;
+                }
             }
             List<Integer> subGroups = groups.subList(groupStart, groupEnd);
             groupStart = groupStart + 25;
@@ -207,18 +210,23 @@ public class RecommendationService {
                     throw new VkException(e.getMessage(), e);
                 }
 
+
                 if (response.getAsJsonArray().size() != 0) {
                     JsonArray groupsArray = response.getAsJsonArray();
                     for (JsonElement group : groupsArray) {
                         JsonObject groupObject = group.getAsJsonObject();
                         Integer groupId = groupObject.getAsJsonPrimitive("groupId").getAsInt();
-                        for (JsonElement member : groupObject.getAsJsonArray("members")) {
-                            JsonObject memberObject = member.getAsJsonObject();
-                            Integer userId = memberObject.getAsJsonPrimitive("user_id")
-                                    .getAsInt();
-                            Integer count = commonGroups.get(userId);
-                            if (memberObject.getAsJsonPrimitive("member").getAsInt() == 1) {
-                                commonGroups.put(userId, count+1);
+                        JsonElement membersElement = groupObject.get("members");
+
+                        if (membersElement.isJsonArray()) {
+                            for (JsonElement member : membersElement.getAsJsonArray()) {
+                                JsonObject memberObject = member.getAsJsonObject();
+                                Integer userId = memberObject.getAsJsonPrimitive("user_id")
+                                        .getAsInt();
+                                Integer count = commonGroups.get(userId);
+                                if (memberObject.getAsJsonPrimitive("member").getAsInt() == 1) {
+                                    commonGroups.put(userId, count + 1);
+                                }
                             }
                         }
                     }
@@ -226,7 +234,11 @@ public class RecommendationService {
             }
         }
 
-        return commonGroups;
+        return commonGroups.entrySet().stream()
+                .filter(a -> !a.getValue().equals(0))
+                .sorted(Map.Entry.comparingByKey())
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
+                        (oldValue, newValue) -> oldValue, HashMap::new));
     }
 
     public List<GroupInfo> getEventsInCity(Float latitude, Float longitude, UserActor actor) throws VkException,
