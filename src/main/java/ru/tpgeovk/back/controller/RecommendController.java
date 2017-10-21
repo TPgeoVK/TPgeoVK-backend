@@ -61,7 +61,7 @@ public class RecommendController {
 
         try {
             List<Integer> users = recommendationService.getUsersFromCheckins(actor);
-            Map<Integer, Integer> result = recommendationService.getSimilarUsers(actor, users);
+            Map<Integer, List<Integer>> result = recommendationService.getSimilarUsers(actor, users);
             return ResponseEntity.ok(result);
         } catch (VkException e) {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));

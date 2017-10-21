@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 @Service
 public class VkProxyService {
 
-    private static final long QUARTER_OFFSET = 900; //15 min.
+    private static final long QUARTER_OFFSET = 300; //5 min.
 
     private final VkApiClient vk;
 
@@ -105,21 +105,9 @@ public class VkProxyService {
         StringBuilder scriptBuilder = new StringBuilder();
         scriptBuilder.append(
                 "var checkins = API.places.getCheckins({\"latitude\":" + latitude.toString() + ",\"longitude\": "
-                        + longitude.toString() + ",\"timestamp\":" + String.valueOf(offsetTime) + ",\"count\":100});\n")
-                .append("var count = checkins.count;\n")
-                .append("var allCheckins = checkins.items;\n")
-                .append("if (checkins.length == 100) {\n")
-                .append("var offset = 100;\n")
-                .append("checkins = API.places.getCheckins({\"user_id\":" + actor.getId().toString() + ",\"count\":100, " +
-                        "\"offset\":offset});\n")
-                .append("while (checkins.length != 0) {\n")
-                .append("allCheckins = allCheckins + checkins.items;\n")
-                .append("offset = offset + 100;\n")
-                .append("checkins = API.places.getCheckins({\"user_id\":" + actor.getId().toString() + ",\"count\":100, " +
-                        "\"offset\":offset});\n")
-                .append("}\n}\n")
-                .append("if (checkins.length == 0) { return [[],[]]; }\n")
-                .append("var posts = API.wall.getById({\"posts\":allCheckins@.id});\n")
+                        + longitude.toString() + ",\"timestamp\":" + String.valueOf(offsetTime) + "});\n")
+                .append("if (checkins.count == 0) { return [[],[]]; }\n")
+                .append("var posts = API.wall.getById({\"posts\":checkins.items@.id});\n")
                 .append("var users = API.users.get({\"user_ids\":posts@.from_id,\"fields\":\"photo_200\"});")
                 .append("return [posts,users];");
 

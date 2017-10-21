@@ -12,7 +12,9 @@ import com.vk.api.sdk.objects.database.responses.GetCountriesResponse;
 import com.vk.api.sdk.objects.friends.responses.GetResponse;
 import com.vk.api.sdk.objects.groups.GroupFull;
 import com.vk.api.sdk.objects.places.Checkin;
+import com.vk.api.sdk.objects.places.PlaceFull;
 import com.vk.api.sdk.objects.places.responses.GetCheckinsResponse;
+import com.vk.api.sdk.queries.groups.GroupField;
 import com.vk.api.sdk.queries.groups.GroupsGetFilter;
 import com.vk.api.sdk.queries.groups.GroupsGetMembersFilter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -77,6 +79,16 @@ public class RecommendationService {
             "res = res + [{\"groupId\": group,\"members\": API.groups.isMember({\"group_id\": group,\"user_ids\": users})}];\n" +
             "i = i + 1;\n" +
             "}\nreturn res;";
+
+    private static final String GET_NEAREST_PLACES_USERS = "var lat = %f;\nvar lon = %f;\n" +
+            "var places = API.places.search({\"latitude\":lat,\"longitude\":lon,\"radius\":2,\"count\":400});\n" +
+            "if (places.count == 0) { return []; }\n" +
+            "var userIds = [];\n" +
+            "var i = 0;\n" +
+            "while (i < places.items.length) {\n" +
+            "userIds = userIds + API.places.getCheckins({\"place\":places.items[i].id});\n" +
+            "i++;\n}\n" +
+            "return userIds;";
 
     private final VkApiClient vk;
 
@@ -163,11 +175,11 @@ public class RecommendationService {
         return users;
     }
 
-    public Map<Integer, Integer> getSimilarUsers(UserActor actor, List<Integer> userIds) throws VkException {
-        Map<Integer, Integer> commonGroups = new HashMap<>();
+    public Map<Integer, List<Integer>> getSimilarUsers(UserActor actor, List<Integer> userIds) throws VkException {
+        Map<Integer, List<Integer>> commonGroups = new HashMap<>();
         com.vk.api.sdk.objects.groups.responses.GetResponse groupsResponse;
         for (Integer id : userIds) {
-            commonGroups.put(id, 0);
+            commonGroups.put(id, new ArrayList<>());
         }
         try {
             groupsResponse = vk.groups().get(actor).userId(actor.getId()).count(200).execute();
@@ -218,14 +230,15 @@ public class RecommendationService {
                         Integer groupId = groupObject.getAsJsonPrimitive("groupId").getAsInt();
                         JsonElement membersElement = groupObject.get("members");
 
+                        /** Проверка для забаненных сообществ */
                         if (membersElement.isJsonArray()) {
                             for (JsonElement member : membersElement.getAsJsonArray()) {
                                 JsonObject memberObject = member.getAsJsonObject();
                                 Integer userId = memberObject.getAsJsonPrimitive("user_id")
                                         .getAsInt();
-                                Integer count = commonGroups.get(userId);
+                                List<Integer> groupList = commonGroups.get(userId);
                                 if (memberObject.getAsJsonPrimitive("member").getAsInt() == 1) {
-                                    commonGroups.put(userId, count + 1);
+                                    groupList.add(groupId);
                                 }
                             }
                         }
@@ -235,10 +248,34 @@ public class RecommendationService {
         }
 
         return commonGroups.entrySet().stream()
-                .filter(a -> !a.getValue().equals(0))
+                .filter(a -> (a.getValue().size() != 0) && (!a.getKey().equals(actor.getId())))
                 .sorted(Map.Entry.comparingByKey())
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
                         (oldValue, newValue) -> oldValue, HashMap::new));
+    }
+
+    public List<Integer> recommendGroupsByUsers(UserActor actor, Map<Integer, List<Integer>> usersGroups) {
+        for (Map.Entry<Integer, List<Integer>> userGroups : usersGroups.entrySet()) {
+
+        }
+        return null;
+    }
+
+    public void recommendPlacesByCheckins(UserActor actor, Float longitude, Float latitude) throws VkException {
+        JsonElement placesUsersResponse;
+        try {
+            String script = String.format(Locale.US, GET_NEAREST_PLACES_USERS, latitude, longitude);
+            placesUsersResponse = vk.execute().code(actor, script).execute();
+        } catch (ApiException | ClientException e) {
+            e.printStackTrace();
+            throw new VkException(e.getMessage(), e);
+        }
+        if (placesUsersResponse.getAsJsonArray().size() == 0) {
+            return;
+        }
+        List<Integer> userIds = gson.fromJson(placesUsersResponse, new TypeToken<List<Integer>>(){}.getType());
+
+
     }
 
     public List<GroupInfo> getEventsInCity(Float latitude, Float longitude, UserActor actor) throws VkException,
