@@ -9,7 +9,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ru.tpgeovk.back.exception.GoogleException;
 import ru.tpgeovk.back.exception.VkException;
+import ru.tpgeovk.back.model.FullPlaceInfo;
 import ru.tpgeovk.back.model.GroupInfo;
+import ru.tpgeovk.back.model.PlaceInfo;
 import ru.tpgeovk.back.model.response.ErrorResponse;
 import ru.tpgeovk.back.service.RecommendationService;
 import ru.tpgeovk.back.service.TokenService;
@@ -62,6 +64,26 @@ public class RecommendController {
         try {
             List<Integer> users = recommendationService.getUsersFromCheckins(actor);
             Map<Integer, List<Integer>> result = recommendationService.getSimilarUsers(actor, users);
+            return ResponseEntity.ok(result);
+        } catch (VkException e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
+    @RequestMapping(path = "/recommend/places/byCheckins", method = RequestMethod.GET)
+    public ResponseEntity getPlaceByCheckins(@RequestParam(value = "token") String token,
+                                             @RequestParam(value = "latitude") String latitude,
+                                             @RequestParam(value = "longitude") String longitude) {
+
+        Integer userId = tokenService.getUserId(token);
+        if (token == null) {
+            return ResponseEntity.ok(new ErrorResponse("User not authenticated"));
+        }
+        UserActor actor = new UserActor(userId, token);
+
+        try {
+            List<FullPlaceInfo> result = recommendationService.recommendPlacesByCheckins(actor, Float.parseFloat(latitude),
+                    Float.parseFloat(longitude));
             return ResponseEntity.ok(result);
         } catch (VkException e) {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));

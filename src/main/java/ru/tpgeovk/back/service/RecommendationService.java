@@ -5,6 +5,7 @@ import com.google.gson.reflect.TypeToken;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.UserActor;
 import com.vk.api.sdk.exceptions.ApiException;
+import com.vk.api.sdk.exceptions.ApiTooManyException;
 import com.vk.api.sdk.exceptions.ClientException;
 import com.vk.api.sdk.objects.base.Country;
 import com.vk.api.sdk.objects.database.responses.GetCitiesResponse;
@@ -22,9 +23,7 @@ import org.springframework.stereotype.Service;
 import ru.tpgeovk.back.contexts.VkContext;
 import ru.tpgeovk.back.exception.GoogleException;
 import ru.tpgeovk.back.exception.VkException;
-import ru.tpgeovk.back.model.CheckinInfo;
-import ru.tpgeovk.back.model.GroupInfo;
-import ru.tpgeovk.back.model.VkCheckin;
+import ru.tpgeovk.back.model.*;
 import ru.tpgeovk.back.text.TextProcessor;
 
 import java.util.*;
@@ -46,7 +45,7 @@ public class RecommendationService {
             "offset = offset + 20;\n}\n" +
             "return userCheckins;";
 
-    private static final String PLACE_CHECKINS = "var placeId = %d;\n" +
+    private static final String PLACE_CHECKINS_USERS = "var placeId = %d;\n" +
             "var checkins = API.places.getCheckins({\"place\":placeId});\n" +
             "var users = checkins.items@.user_id;\n" +
             "var total = checkins.count;\n" +
@@ -58,7 +57,7 @@ public class RecommendationService {
             "}\n" +
             "return users;";
 
-    private static final String COORD_CHECKINS = "var lat = %f;\nvar lon = %f;\n" +
+    private static final String COORD_CHECKINS_USERS = "var lat = %f;\nvar lon = %f;\n" +
             "var checkins = API.places.getCheckins({\"latitude\":lat,\"longitude\":lon});\n" +
             "var users = checkins.items@.user_id;\n" +
             "var total = checkins.count;\n" +
@@ -70,7 +69,9 @@ public class RecommendationService {
             "}\n" +
             "return users;";
 
-    private static final String GROUP_MEMBERS = "var groups = %s;\n var users = %s;\n" +
+    private static final String GROUP_MEMBERS = "var userId = %d;\nvar groupsOffset = %d;\nvar users = %s;\n" +
+            "var groups = API.groups.get({\"user_id\":userId,\"offset\":groupsOffset,\"count\":24}).items;\n" +
+            "if (groups.length == 0) { return []; }\n" +
             "var i = 0;\n" +
             "var res = [];\n" +
             "var group;\n" +
@@ -79,6 +80,22 @@ public class RecommendationService {
             "res = res + [{\"groupId\": group,\"members\": API.groups.isMember({\"group_id\": group,\"user_ids\": users})}];\n" +
             "i = i + 1;\n" +
             "}\nreturn res;";
+
+    private static final String PLACE_USERS = "var placeId = %d;" +
+            "var checkins = API.places.getCheckins({\"place\":placeId});\n" +
+            "if (checkins.count == 0) { return []; }\n" +
+            "var userIds = checkins.items@.user_id;\n" +
+            "var offset = checkins.items.length;\n" +
+            "checkins = API.places.getCheckins({\"place\":placeId, \"offset\":offset});\n" +
+            "var tries = 2;\n" +
+            "offset = offset + checkins.items.length;\n" +
+            "userIds = userIds + checkins.items@.user_id;\n" +
+            "while ((tries <= 25) && (checkins.items.length != 0)) {\n" +
+            "checkins = API.places.getCheckins({\"place\":placeId,\"offset\":offset});\n" +
+            "userIds = userIds + checkins.items@.user_id;\n" +
+            "offset = offset + checkins.items.length;\n" +
+            "tries++;\n}\n" +
+            "return userIds;";
 
     private static final String GET_NEAREST_PLACES_USERS = "var lat = %f;\nvar lon = %f;\n" +
             "var places = API.places.search({\"latitude\":lat,\"longitude\":lon,\"radius\":2,\"count\":400});\n" +
@@ -146,20 +163,20 @@ public class RecommendationService {
             if (!checkin.getPlace().getId().equals(0)) {
                 try {
                     /** Locale.US для точки вместо запятой при подстановке Float */
-                    script = String.format(Locale.US, PLACE_CHECKINS, checkin.getPlace().getId());
+                    script = String.format(Locale.US, PLACE_CHECKINS_USERS, checkin.getPlace().getId());
                     response = vk.execute().code(actor, script).execute();
                 } catch (ApiException | ClientException e) {
                     e.printStackTrace();
                     throw new VkException(e.getMessage(), e);
                 }
                 if (response.getAsJsonArray().size() != 0) {
-                    users.addAll(gson.fromJson(response, new TypeToken<List<Integer>>() {}.getType()));
+                    users.addAll(gson.fromJson(response, new TypeToken<List<Integer>>() {
+                    }.getType()));
                 }
 
-            }
-            else {
+            } else {
                 try {
-                    script = String.format(Locale.US, COORD_CHECKINS, checkin.getPlace().getLatitude(),
+                    script = String.format(Locale.US, COORD_CHECKINS_USERS, checkin.getPlace().getLatitude(),
                             checkin.getPlace().getLongitude());
                     response = vk.execute().code(actor, script).execute();
                 } catch (ApiException | ClientException e) {
@@ -167,7 +184,8 @@ public class RecommendationService {
                     throw new VkException(e.getMessage(), e);
                 }
                 if (response.getAsJsonArray().size() != 0) {
-                    users.addAll(gson.fromJson(response, new TypeToken<List<Integer>>() {}.getType()));
+                    users.addAll(gson.fromJson(response, new TypeToken<List<Integer>>() {
+                    }.getType()));
                 }
             }
         }
@@ -177,69 +195,62 @@ public class RecommendationService {
 
     public Map<Integer, List<Integer>> getSimilarUsers(UserActor actor, List<Integer> userIds) throws VkException {
         Map<Integer, List<Integer>> commonGroups = new HashMap<>();
-        com.vk.api.sdk.objects.groups.responses.GetResponse groupsResponse;
         for (Integer id : userIds) {
             commonGroups.put(id, new ArrayList<>());
         }
-        try {
-            groupsResponse = vk.groups().get(actor).userId(actor.getId()).count(200).execute();
-        } catch (ApiException | ClientException e) {
-            e.printStackTrace();
-            throw new VkException(e.getMessage(), e);
-        }
-        List<Integer> groups = groupsResponse.getItems();
 
-        int groupStart = 0;
-        int groupEnd = 25;
-        String script;
-        JsonElement response;
-        while (groupStart <= groups.size()) {
-            if (groupEnd >= groups.size()) {
-                groupEnd = groups.size() - 1;
-                if (groupStart > groupEnd) {
-                    groupStart = groupEnd;
-                }
+        int start = 0;
+        int end = 500;
+        while (start < userIds.size()) {
+            if (end > userIds.size()) {
+                end = userIds.size();
             }
-            List<Integer> subGroups = groups.subList(groupStart, groupEnd);
-            groupStart = groupStart + 25;
-            groupEnd = groupEnd + 25;
+            List<Integer> currentIds = userIds.subList(start, end);
+            start = start + 500;
+            end = end + 500;
 
-            int usersStart = 0;
-            int usersEnd = 500;
-            while (usersStart < userIds.size()) {
-                if (usersEnd >= userIds.size()) {
-                    usersEnd = userIds.size() - 1;
-                }
-                List<Integer> subUsers = userIds.subList(usersStart, usersEnd);
-                usersStart = usersStart + 500;
-                usersEnd =usersEnd + 500;
-
-                script = String.format(GROUP_MEMBERS, subGroups.toString(), subUsers.toString());
+            Integer groupsOffset = 0;
+            JsonElement response = null;
+            String script;
+            while (groupsOffset < 200) {
                 try {
+                    script = String.format(GROUP_MEMBERS, actor.getId(), groupsOffset, currentIds.toString());
                     response = vk.execute().code(actor, script).execute();
                 } catch (ApiException | ClientException e) {
-                    e.printStackTrace();
-                    throw new VkException(e.getMessage(), e);
+                    if (e instanceof ApiTooManyException) {
+                        try {
+                            Thread.currentThread().sleep(50);
+                            continue;
+                        } catch (InterruptedException e1) {
+                            Thread.currentThread().interrupt();
+                        }
+                    }
+                    else {
+                        e.printStackTrace();
+                        throw new VkException(e.getMessage(), e);
+                    }
                 }
 
+                if (response.getAsJsonArray().size() == 0) {
+                    break;
+                }
+                groupsOffset = groupsOffset + 24;
 
-                if (response.getAsJsonArray().size() != 0) {
-                    JsonArray groupsArray = response.getAsJsonArray();
-                    for (JsonElement group : groupsArray) {
-                        JsonObject groupObject = group.getAsJsonObject();
-                        Integer groupId = groupObject.getAsJsonPrimitive("groupId").getAsInt();
-                        JsonElement membersElement = groupObject.get("members");
+                JsonArray groupsArray = response.getAsJsonArray();
+                for (JsonElement group : groupsArray) {
+                    JsonObject groupObject = group.getAsJsonObject();
+                    Integer groupId = groupObject.getAsJsonPrimitive("groupId").getAsInt();
+                    JsonElement membersElement = groupObject.get("members");
 
-                        /** Проверка для забаненных сообществ */
-                        if (membersElement.isJsonArray()) {
-                            for (JsonElement member : membersElement.getAsJsonArray()) {
-                                JsonObject memberObject = member.getAsJsonObject();
-                                Integer userId = memberObject.getAsJsonPrimitive("user_id")
-                                        .getAsInt();
-                                List<Integer> groupList = commonGroups.get(userId);
-                                if (memberObject.getAsJsonPrimitive("member").getAsInt() == 1) {
-                                    groupList.add(groupId);
-                                }
+                    /** Проверка для забаненных сообществ */
+                    if (membersElement.isJsonArray()) {
+                        for (JsonElement member : membersElement.getAsJsonArray()) {
+                            JsonObject memberObject = member.getAsJsonObject();
+                            Integer userId = memberObject.getAsJsonPrimitive("user_id")
+                                    .getAsInt();
+                            List<Integer> groupList = commonGroups.get(userId);
+                            if (memberObject.getAsJsonPrimitive("member").getAsInt() == 1) {
+                                groupList.add(groupId);
                             }
                         }
                     }
@@ -249,10 +260,11 @@ public class RecommendationService {
 
         return commonGroups.entrySet().stream()
                 .filter(a -> (a.getValue().size() != 0) && (!a.getKey().equals(actor.getId())))
-                .sorted(Map.Entry.comparingByKey())
+                .sorted((a,b) -> (a.getValue().size() - b.getValue().size()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
                         (oldValue, newValue) -> oldValue, HashMap::new));
     }
+
 
     public List<Integer> recommendGroupsByUsers(UserActor actor, Map<Integer, List<Integer>> usersGroups) {
         for (Map.Entry<Integer, List<Integer>> userGroups : usersGroups.entrySet()) {
@@ -261,20 +273,61 @@ public class RecommendationService {
         return null;
     }
 
-    public void recommendPlacesByCheckins(UserActor actor, Float longitude, Float latitude) throws VkException {
-        JsonElement placesUsersResponse;
+    public List<FullPlaceInfo> recommendPlacesByCheckins(UserActor actor, Float latitude, Float longitude)
+            throws VkException {
+        List<PlaceFull> nearestPlaces;
         try {
-            String script = String.format(Locale.US, GET_NEAREST_PLACES_USERS, latitude, longitude);
-            placesUsersResponse = vk.execute().code(actor, script).execute();
+            nearestPlaces = vk.places().search(actor, latitude, longitude).q("*").radius(1).count(20).execute().getItems();
+            if (nearestPlaces.size() == 0) {
+                nearestPlaces = vk.places().search(actor, latitude, longitude).q("*").radius(2).count(20).execute().getItems();
+            }
         } catch (ApiException | ClientException e) {
             e.printStackTrace();
             throw new VkException(e.getMessage(), e);
         }
-        if (placesUsersResponse.getAsJsonArray().size() == 0) {
-            return;
+        if (nearestPlaces.size() == 0) {
+            return new ArrayList<>();
         }
-        List<Integer> userIds = gson.fromJson(placesUsersResponse, new TypeToken<List<Integer>>(){}.getType());
 
+        Map<PlaceFull, Integer> placeRatings = new HashMap<>();
+        String scrtipt;
+        JsonElement response;
+        for (PlaceFull place : nearestPlaces) {
+            scrtipt = String.format(PLACE_CHECKINS_USERS, place.getId());
+            try {
+                response = vk.execute().code(actor, scrtipt).execute();
+            } catch (ApiException | ClientException e) {
+                if (e instanceof ApiTooManyException) {
+                    try {
+                        Thread.currentThread().sleep(50);
+                        continue;
+                    } catch (InterruptedException e1) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+                e.printStackTrace();
+                throw new VkException(e.getMessage(), e);
+            }
+            if (response.getAsJsonArray().size() == 0) {
+                continue;
+            }
+            List<Integer> userIds = gson.fromJson(response, new TypeToken<List<Integer>>() {
+            }.getType());
+
+            Map<Integer, List<Integer>> similarUsers = getSimilarUsers(actor, userIds);
+            Integer sum = 0;
+            for (List<Integer> userGroups : similarUsers.values()) {
+                sum = sum + userGroups.size();
+            }
+
+            placeRatings.put(place, sum);
+        }
+
+        return placeRatings.entrySet().stream()
+                .filter(a -> !a.getValue().equals(0))
+                .sorted(Comparator.comparingInt(Map.Entry::getValue))
+                .map(a -> FullPlaceInfo.fromPlaceFull(a.getKey()))
+                .collect(Collectors.toList());
 
     }
 
@@ -296,7 +349,8 @@ public class RecommendationService {
         }
 
         /** TODO: создать десериализатор в GroupInfo */
-        List<GroupFull> groups = gson.fromJson(response, new TypeToken<List<GroupFull>>(){}.getType());
+        List<GroupFull> groups = gson.fromJson(response, new TypeToken<List<GroupFull>>() {
+        }.getType());
         if ((groups == null) || (groups.isEmpty())) {
             return new ArrayList<>();
         }
