@@ -13,7 +13,7 @@ public class VkContext {
     private static final String SECURE_KEY;
     private static final String ACCESS_KEY;
 
-    private static final String SCOPE = "friends,pages,notes,wall,groups";
+    private static final String SCOPE = "friends,pages,notes,wall,groups,offline";
     private static final String API_VERSION = "5.68";
 
     private static final VkApiClient VK_API_CLIENT;
