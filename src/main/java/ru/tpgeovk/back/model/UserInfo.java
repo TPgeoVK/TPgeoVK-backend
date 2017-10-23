@@ -1,11 +1,14 @@
 package ru.tpgeovk.back.model;
 
+import java.util.Base64;
+
 public class UserInfo {
 
     private Integer id;
     private String firstName;
     private String lastName;
     private String photo200;
+    private String photo200Base64;
 
     public UserInfo() { }
 
@@ -14,6 +17,7 @@ public class UserInfo {
         this.firstName = firstName;
         this.lastName = lastName;
         this.photo200 = photo200;
+        this.photo200Base64 = Base64.getEncoder().encodeToString(photo200.getBytes());
     }
 
     public Integer getId() {
@@ -46,5 +50,6 @@ public class UserInfo {
 
     public void setPhoto200(String photo200) {
         this.photo200 = photo200;
+        this.photo200Base64 = Base64.getEncoder().encodeToString(photo200.getBytes());
     }
 }
