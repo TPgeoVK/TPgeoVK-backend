@@ -5,6 +5,7 @@ import com.vk.api.sdk.objects.places.Checkin;
 import com.vk.api.sdk.objects.places.PlaceFull;
 import com.vk.api.sdk.objects.users.UserFull;
 import com.vk.api.sdk.objects.wall.WallpostFull;
+import ru.tpgeovk.back.model.vk.VkPlaceFull;
 import ru.tpgeovk.back.model.vk.VkWallpostFull;
 
 public class CheckinInfo {
@@ -31,7 +32,7 @@ public class CheckinInfo {
         result.setReposts(postFull.getReposts().getCount());
 
         if (postFull.getGeo() != null) {
-            PlaceFull place = postFull.getGeo().getPlace();
+            VkPlaceFull place = postFull.getGeo().getPlace();
             if (place != null) {
                 if (!place.getId().equals(0)) {
                     PlaceInfo placeInfo = new PlaceInfo();

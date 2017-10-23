@@ -13,7 +13,7 @@ public class VkGeo {
     @SerializedName("coordinates")
     private String coordinates;
     @SerializedName("place")
-    private PlaceFull place;
+    private VkPlaceFull place;
     @SerializedName("showmap")
     private Integer showmap;
 
@@ -28,7 +28,7 @@ public class VkGeo {
         return this.coordinates;
     }
 
-    public PlaceFull getPlace() {
+    public VkPlaceFull getPlace() {
         return this.place;
     }
 

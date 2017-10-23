@@ -91,7 +91,7 @@ public class VkProxyService {
 
         List<VkWallpostFull> posts;
         if (response.getAsJsonArray().size() != 0) {
-            posts = gson.fromJson(response, new TypeToken<VkWallpostFull>(){}.getType());
+            posts = gson.fromJson(response, new TypeToken<List<VkWallpostFull>>(){}.getType());
         }
         else {
             return new ArrayList<>();
@@ -125,7 +125,7 @@ public class VkProxyService {
 
         List<VkWallpostFull> posts;
         if (response.getAsJsonArray().size() != 0) {
-            posts = gson.fromJson(response.getAsJsonArray().get(0), new TypeToken<VkWallpostFull>(){}.getType());
+            posts = gson.fromJson(response.getAsJsonArray().get(0), new TypeToken<List<VkWallpostFull>>(){}.getType());
         }
         else {
             return new ArrayList<>();
