@@ -7,16 +7,10 @@ public class PlaceInfo {
     private Float longitude;
     private Float latitude;
     private String placeIcon;
+    private Integer groupId;
+    private String groupPhoto;
 
     public PlaceInfo() { }
-
-    public PlaceInfo(Integer id, String title, Float longitude, Float latitude, String placeIcon) {
-        this.id = id;
-        this.title = title;
-        this.longitude = longitude;
-        this.latitude = latitude;
-        this.placeIcon = placeIcon;
-    }
 
     public Integer getId() {
         return id;
@@ -56,5 +50,17 @@ public class PlaceInfo {
 
     public void setPlaceIcon(String placeIcon) {
         this.placeIcon = placeIcon;
+    }
+
+    public Integer getGroupId() { return groupId; }
+
+    public void setGroupId(Integer groupId) { this.groupId = groupId; }
+
+    public String getGroupPhoto() {
+        return groupPhoto;
+    }
+
+    public void setGroupPhoto(String groupPhoto) {
+        this.groupPhoto = groupPhoto;
     }
 }

@@ -2,8 +2,10 @@ package ru.tpgeovk.back.model;
 
 import com.vk.api.sdk.objects.base.Place;
 import com.vk.api.sdk.objects.places.Checkin;
+import com.vk.api.sdk.objects.places.PlaceFull;
 import com.vk.api.sdk.objects.users.UserFull;
 import com.vk.api.sdk.objects.wall.WallpostFull;
+import ru.tpgeovk.back.model.vk.VkWallpostFull;
 
 public class CheckinInfo {
 
@@ -18,7 +20,7 @@ public class CheckinInfo {
     private UserInfo user;
     private PlaceInfo place;
 
-    public static CheckinInfo fromPostFull(WallpostFull postFull) {
+    public static CheckinInfo fromPostFull(VkWallpostFull postFull) {
         CheckinInfo result = new CheckinInfo();
         result.setCheckinId(postFull.getFromId().toString() + "_" + postFull.getId().toString());
         result.setPostId(postFull.getId());
@@ -29,15 +31,19 @@ public class CheckinInfo {
         result.setReposts(postFull.getReposts().getCount());
 
         if (postFull.getGeo() != null) {
-            Place place = postFull.getGeo().getPlace();
+            PlaceFull place = postFull.getGeo().getPlace();
             if (place != null) {
                 if (!place.getId().equals(0)) {
-                    PlaceInfo placeInfo = new PlaceInfo(
-                            place.getId(),
-                            place.getTitle(),
-                            place.getLongitude(),
-                            place.getLatitude(),
-                            place.getIcon());
+                    PlaceInfo placeInfo = new PlaceInfo();
+                    placeInfo.setId(place.getId());
+                    placeInfo.setTitle(place.getTitle());
+                    placeInfo.setLongitude(place.getLongitude());
+                    placeInfo.setLatitude(place.getLatitude());
+                    placeInfo.setPlaceIcon(place.getIcon());
+                    if ((place.getGroupId() != null) && (!place.getGroupId().equals(0))) {
+                        placeInfo.setGroupId(place.getGroupId());
+                        placeInfo.setGroupPhoto(place.getGroupPhoto());
+                    }
                     result.setPlace(placeInfo);
 
                     return result;
@@ -49,6 +55,10 @@ public class CheckinInfo {
                     String[] coordinates = postFull.getGeo().getCoordinates().split(" ");
                     placeInfo.setLatitude(Float.parseFloat(coordinates[0]));
                     placeInfo.setLongitude(Float.parseFloat(coordinates[1]));
+                    if ((place.getGroupId() != null) && (!place.getGroupId().equals(0))) {
+                        placeInfo.setGroupId(place.getGroupId());
+                        placeInfo.setGroupPhoto(place.getGroupPhoto());
+                    }
                     result.setPlace(placeInfo);
 
                     return result;
@@ -59,13 +69,17 @@ public class CheckinInfo {
             String[] coordinates = postFull.getGeo().getCoordinates().split(" ");
             placeInfo.setLatitude(Float.parseFloat(coordinates[0]));
             placeInfo.setLongitude(Float.parseFloat(coordinates[1]));
+            if ((place.getGroupId() != null) && (!place.getGroupId().equals(0))) {
+                placeInfo.setGroupId(place.getGroupId());
+                placeInfo.setGroupPhoto(place.getGroupPhoto());
+            }
             result.setPlace(placeInfo);
         }
 
         return result;
     }
 
-    public static CheckinInfo fromPostAndUser(WallpostFull postFull, UserFull userFull) {
+    public static CheckinInfo fromPostAndUser(VkWallpostFull postFull, UserFull userFull) {
         CheckinInfo result = CheckinInfo.fromPostFull(postFull);
 
         UserInfo userInfo = new UserInfo(

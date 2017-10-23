@@ -1,4 +1,4 @@
-package ru.tpgeovk.back.model;
+package ru.tpgeovk.back.model.vk;
 
 import com.google.gson.annotations.SerializedName;
 

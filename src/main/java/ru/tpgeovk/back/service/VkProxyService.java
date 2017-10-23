@@ -3,6 +3,7 @@ package ru.tpgeovk.back.service;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
+import com.google.gson.reflect.TypeToken;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.UserActor;
 import com.vk.api.sdk.exceptions.ApiException;
@@ -18,6 +19,7 @@ import ru.tpgeovk.back.contexts.VkContext;
 import ru.tpgeovk.back.exception.VkException;
 import ru.tpgeovk.back.model.CheckinInfo;
 import ru.tpgeovk.back.model.UserInfo;
+import ru.tpgeovk.back.model.vk.VkWallpostFull;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -87,9 +89,9 @@ public class VkProxyService {
             throw new VkException(e.getMessage(), e);
         }
 
-        List<WallpostFull> posts;
+        List<VkWallpostFull> posts;
         if (response.getAsJsonArray().size() != 0) {
-            posts = Arrays.asList(gson.fromJson(response, WallpostFull[].class));
+            posts = gson.fromJson(response, new TypeToken<VkWallpostFull>(){}.getType());
         }
         else {
             return new ArrayList<>();
@@ -121,9 +123,9 @@ public class VkProxyService {
             throw new VkException(e.getMessage(), e);
         }
 
-        List<WallpostFull> posts;
+        List<VkWallpostFull> posts;
         if (response.getAsJsonArray().size() != 0) {
-            posts = Arrays.asList(gson.fromJson(response.getAsJsonArray().get(0), WallpostFull[].class));
+            posts = gson.fromJson(response.getAsJsonArray().get(0), new TypeToken<VkWallpostFull>(){}.getType());
         }
         else {
             return new ArrayList<>();
