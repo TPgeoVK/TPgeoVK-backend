@@ -48,6 +48,8 @@ public class UserInfo {
         return photo200;
     }
 
+    public String getPhoto200Base64() { return photo200Base64; }
+
     public void setPhoto200(String photo200) {
         this.photo200 = photo200;
         this.photo200Base64 = Base64.getEncoder().encodeToString(photo200.getBytes());
