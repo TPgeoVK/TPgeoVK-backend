@@ -3,13 +3,11 @@ package ru.tpgeovk.back.controller;
 import com.vk.api.sdk.client.actors.UserActor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import ru.tpgeovk.back.exception.VkException;
 import ru.tpgeovk.back.model.CheckinInfo;
 import ru.tpgeovk.back.model.UserInfo;
+import ru.tpgeovk.back.model.request.CreatePostRequest;
 import ru.tpgeovk.back.model.response.ErrorResponse;
 import ru.tpgeovk.back.service.TokenService;
 import ru.tpgeovk.back.service.VkProxyService;
@@ -93,5 +91,21 @@ public class VkProxyController {
         }
 
         return ResponseEntity.ok(result);
+    }
+
+    @RequestMapping(path = "/vkapi/post/create", method = RequestMethod.POST)
+    public ResponseEntity createPost(@RequestBody CreatePostRequest request) {
+
+        UserActor actor = tokenService.getUser(request.getToken());
+        if (actor == null) {
+            return ResponseEntity.badRequest().body(new ErrorResponse("Unknown token received"));
+        }
+
+        try {
+            CheckinInfo result = vkService.createPost(actor, request.getPlaceId(), request.getText());
+            return ResponseEntity.ok(result);
+        } catch (VkException e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        }
     }
 }

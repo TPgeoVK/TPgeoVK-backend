@@ -15,10 +15,12 @@ import com.vk.api.sdk.objects.wall.WallpostFull;
 import com.vk.api.sdk.queries.users.UserField;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import ru.tpgeovk.back.contexts.VkContext;
 import ru.tpgeovk.back.exception.VkException;
 import ru.tpgeovk.back.model.CheckinInfo;
 import ru.tpgeovk.back.model.UserInfo;
+import ru.tpgeovk.back.model.vk.VkWallpost;
 import ru.tpgeovk.back.model.vk.VkWallpostFull;
 
 import java.sql.Timestamp;
@@ -145,6 +147,30 @@ public class VkProxyService {
         }
 
         return result;
+    }
+
+    public CheckinInfo createPost(UserActor actor, Integer placeId, String text) throws VkException {
+        Integer checkinId;
+        try {
+            checkinId = StringUtils.isEmpty(text) ? vk.places().checkin(actor).placeId(placeId).execute().getId() :
+                    vk.places().checkin(actor).placeId(placeId).text(text).execute().getId();
+        } catch (ApiException | ClientException e) {
+            e.printStackTrace();
+            throw new VkException(e.getMessage(), e);
+        }
+
+        String script = "return API.wall.getById({\"posts\":" + actor.getId().toString() + "_" + checkinId.toString() +
+                "})[0];\n";
+        JsonElement response;
+        try {
+            response = vk.execute().code(actor, script).execute();
+        } catch (ApiException | ClientException e) {
+            e.printStackTrace();
+            throw new VkException(e.getMessage(), e);
+        }
+        VkWallpostFull post = gson.fromJson(response, VkWallpostFull.class);
+
+        return CheckinInfo.fromPostFull(post);
     }
 }
 
