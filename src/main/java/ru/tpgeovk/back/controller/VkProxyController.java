@@ -33,11 +33,10 @@ public class VkProxyController {
     @RequestMapping(path = "/vkapi/user", method = RequestMethod.GET)
     public ResponseEntity getUser(@RequestParam(value = "token") String token) {
 
-        Integer userId = tokenService.getUserId(token);
-        if (userId == null) {
+        UserActor actor = tokenService.getUser(token);
+        if (actor == null) {
             return ResponseEntity.badRequest().body(new ErrorResponse("Unknown token received"));
         }
-        UserActor actor = new UserActor(userId, token);
 
         UserInfo result;
         try {
@@ -52,11 +51,10 @@ public class VkProxyController {
     @RequestMapping(path = "/vkapi/checkins/all", method = RequestMethod.GET)
     public ResponseEntity getAllCheckins(@RequestParam(value = "token") String token) {
 
-        Integer userId = tokenService.getUserId(token);
-        if (userId == null) {
+        UserActor actor = tokenService.getUser(token);
+        if (actor == null) {
             return ResponseEntity.badRequest().body(new ErrorResponse("Unknown token received"));
         }
-        UserActor actor = new UserActor(userId, token);
 
         List<CheckinInfo> result;
         try {
@@ -82,11 +80,10 @@ public class VkProxyController {
             return ResponseEntity.badRequest().body(new ErrorResponse("Wrong coordinates values!"));
         }
 
-        Integer userId = tokenService.getUserId(token);
-        if (userId == null) {
+        UserActor actor = tokenService.getUser(token);
+        if (actor == null) {
             return ResponseEntity.badRequest().body(new ErrorResponse("Unknown token received"));
         }
-        UserActor actor = new UserActor(userId, token);
 
         List<CheckinInfo> result;
         try {

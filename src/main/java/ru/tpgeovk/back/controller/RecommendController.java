@@ -36,11 +36,10 @@ public class RecommendController {
                                             @RequestParam(value = "latitude") String latitude,
                                             @RequestParam(value = "longitude") String longitude) {
 
-        Integer userId = tokenService.getUserId(token);
-        if (token == null) {
+        UserActor actor = tokenService.getUser(token);
+        if (actor == null) {
             return ResponseEntity.ok(new ErrorResponse("User not authenticated"));
         }
-        UserActor actor = new UserActor(userId, token);
 
         try {
             List<GroupInfo> result = recommendationService.recommendEventByFriends(Float.parseFloat(latitude),
@@ -55,11 +54,10 @@ public class RecommendController {
     @RequestMapping(path = "/recommend/groups/byCheckins", method = RequestMethod.GET)
     public ResponseEntity getGroupByCheckins(@RequestParam(value = "token") String token) {
 
-        Integer userId = tokenService.getUserId(token);
-        if (token == null) {
+        UserActor actor = tokenService.getUser(token);
+        if (actor == null) {
             return ResponseEntity.ok(new ErrorResponse("User not authenticated"));
         }
-        UserActor actor = new UserActor(userId, token);
 
         try {
             List<Integer> users = recommendationService.getUsersFromCheckins(actor);
@@ -75,11 +73,10 @@ public class RecommendController {
                                              @RequestParam(value = "latitude") String latitude,
                                              @RequestParam(value = "longitude") String longitude) {
 
-        Integer userId = tokenService.getUserId(token);
-        if (token == null) {
+        UserActor actor = tokenService.getUser(token);
+        if (actor == null) {
             return ResponseEntity.ok(new ErrorResponse("User not authenticated"));
         }
-        UserActor actor = new UserActor(userId, token);
 
         try {
             List<FullPlaceInfo> result = recommendationService.recommendNearestPlaces(actor, Float.parseFloat(latitude),

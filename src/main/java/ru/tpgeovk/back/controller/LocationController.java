@@ -28,11 +28,10 @@ public class LocationController {
     @RequestMapping(path = "/location/detectPlace", method = RequestMethod.POST, consumes = "application/json")
     public ResponseEntity getPredictedPlace(@RequestBody PredictRequest request) {
 
-        Integer userId = tokenService.getUserId(request.getToken());
-        if (userId == null) {
+        UserActor actor = tokenService.getUser(request.getToken());
+        if (actor == null) {
             return ResponseEntity.ok(new ErrorResponse("User not authenticated"));
         }
-        UserActor actor = new UserActor(userId, request.getToken());
 
         List<FullPlaceInfo> places = null;
 
