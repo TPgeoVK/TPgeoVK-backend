@@ -13,6 +13,7 @@ public class FullPlaceInfo {
     private String placeIcon;
     private Integer distance;
     private Integer groupId;
+    private String groupPhoto;
     private Integer checkinsCount;
     private Integer userCheckinsCount;
     private Integer friendsCheckinsCount;
@@ -28,6 +29,7 @@ public class FullPlaceInfo {
         result.setDistance(placeFull.getDistance());
         result.setCheckinsCount(placeFull.getCheckins());
         result.setGroupId(placeFull.getGroupId());
+        result.setGroupPhoto(placeFull.getGroupPhoto());
         result.setUserCheckinsCount(0);
         result.setFriendsCheckinsCount(0);
         result.setTextRating(0);
@@ -109,6 +111,10 @@ public class FullPlaceInfo {
     public void setGroupId(Integer groupId) {
         this.groupId = groupId;
     }
+
+    public String getGroupPhoto() { return groupPhoto; }
+
+    public void setGroupPhoto(String groupPhoto) { this.groupPhoto = groupPhoto; }
 
     public Integer getUserCheckinsCount() {
         return userCheckinsCount;

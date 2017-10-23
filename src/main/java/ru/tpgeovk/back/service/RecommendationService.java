@@ -273,7 +273,7 @@ public class RecommendationService {
         return null;
     }
 
-    public List<FullPlaceInfo> recommendPlacesByCheckins(UserActor actor, Float latitude, Float longitude)
+    public List<FullPlaceInfo> recommendNearestPlaces(UserActor actor, Float latitude, Float longitude)
             throws VkException {
         List<PlaceFull> nearestPlaces;
         try {

@@ -70,7 +70,7 @@ public class RecommendController {
         }
     }
 
-    @RequestMapping(path = "/recommend/places/byCheckins", method = RequestMethod.GET)
+    @RequestMapping(path = "/recommend/places/nearest", method = RequestMethod.GET)
     public ResponseEntity getPlaceByCheckins(@RequestParam(value = "token") String token,
                                              @RequestParam(value = "latitude") String latitude,
                                              @RequestParam(value = "longitude") String longitude) {
@@ -82,7 +82,7 @@ public class RecommendController {
         UserActor actor = new UserActor(userId, token);
 
         try {
-            List<FullPlaceInfo> result = recommendationService.recommendPlacesByCheckins(actor, Float.parseFloat(latitude),
+            List<FullPlaceInfo> result = recommendationService.recommendNearestPlaces(actor, Float.parseFloat(latitude),
                     Float.parseFloat(longitude));
             return ResponseEntity.ok(result);
         } catch (VkException e) {
