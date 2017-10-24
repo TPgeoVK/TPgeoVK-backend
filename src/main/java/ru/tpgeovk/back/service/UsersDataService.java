@@ -1,11 +1,9 @@
 package ru.tpgeovk.back.service;
 
 import org.springframework.stereotype.Service;
-import ru.tpgeovk.back.model.CheckinInfo;
-import ru.tpgeovk.back.model.GroupInfo;
-import ru.tpgeovk.back.model.PlaceInfo;
-import ru.tpgeovk.back.model.UserInfo;
+import ru.tpgeovk.back.model.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,20 +11,11 @@ import java.util.Map;
 @Service
 public class UsersDataService {
 
-    private Map<String, UserInfo> usersInfo = new HashMap<>();
     private Map<String, List<CheckinInfo>> usersCheckins = new HashMap<>();
 
     private Map<String, List<UserInfo>> recommendedFriends = new HashMap<>();
-    private Map<String, List<PlaceInfo>> recommendedNearestPlaces = new HashMap<>();
+    private Map<String, List<FullPlaceInfo>> recommendedNearestPlaces = new HashMap<>();
     private Map<String, List<GroupInfo>> recommendedGroups = new HashMap<>();
-
-    public UserInfo getUserInfo(String token) {
-        return usersInfo.get(token);
-    }
-
-    public void setUsersInfo(String token, UserInfo userInfo) {
-        usersInfo.put(token, userInfo);
-    }
 
     public List<CheckinInfo> getCheckins(String token) {
         return usersCheckins.get(token);
@@ -36,7 +25,7 @@ public class UsersDataService {
         return recommendedFriends.get(token);
     }
 
-    public List<PlaceInfo> getRecommendedNearestPlaces(String token) {
+    public List<FullPlaceInfo> getRecommendedNearestPlaces(String token) {
         return recommendedNearestPlaces.get(token);
     }
 
@@ -44,8 +33,18 @@ public class UsersDataService {
         return recommendedGroups.get(token);
     }
 
-    public void removeAll(String token) {
-        usersInfo.remove(token);
+    public void createForUser(String token) {
+        if (usersCheckins.get(token) != null) {
+            return;
+        }
+
+        usersCheckins.put(token, new ArrayList<>());
+        recommendedFriends.put(token, new ArrayList<>());
+        recommendedGroups.put(token, new ArrayList<>());
+        recommendedNearestPlaces.put(token, new ArrayList<>());
+    }
+
+    public void removeForUser(String token) {
         usersCheckins.remove(token);
         recommendedFriends.remove(token);
         recommendedNearestPlaces.remove(token);
