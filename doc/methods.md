@@ -12,10 +12,10 @@
  - **latitude** - широта
  - **longitude** - долгота
 От полученных данных будет зависеть результат обращения к следующим методам:
- - /recommend/friends
- - /recommend/groups
- - /recommend/places/nearest
- - /location/detectPlace
+ - **/recommend/friends**
+ - **/recommend/groups**
+ - **/recommend/places/nearest**
+ - **/location/detectPlace**
 Повторный запрос запустит новый сбор данных, если предыдущий запрос завершился (успешно или с ошибкой).
 
 ### GET /trigger/status
