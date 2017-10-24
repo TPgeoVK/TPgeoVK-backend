@@ -1,5 +1,7 @@
 package ru.tpgeovk.back.model;
 
+import com.vk.api.sdk.objects.users.UserFull;
+
 import java.util.Base64;
 
 public class UserInfo {
@@ -9,6 +11,16 @@ public class UserInfo {
     private String lastName;
     private String photo200;
     private String photo200Base64;
+
+    public static UserInfo fromUserFull(UserFull userFull) {
+        UserInfo result = new UserInfo();
+        result.setId(userFull.getId());
+        result.setFirstName(userFull.getFirstName());
+        result.setLastName(userFull.getLastName());
+        result.setPhoto200(userFull.getPhoto200());
+
+        return result;
+    }
 
     public UserInfo() { }
 
@@ -52,6 +64,10 @@ public class UserInfo {
 
     public void setPhoto200(String photo200) {
         this.photo200 = photo200;
-        this.photo200Base64 = Base64.getEncoder().encodeToString(photo200.getBytes());
+        if (photo200 != null) {
+            this.photo200Base64 = Base64.getEncoder().encodeToString(photo200.getBytes());
+        } else {
+            this.photo200Base64 = null;
+        }
     }
 }

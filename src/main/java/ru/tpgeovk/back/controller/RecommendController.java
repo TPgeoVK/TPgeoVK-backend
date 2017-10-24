@@ -12,6 +12,7 @@ import ru.tpgeovk.back.exception.VkException;
 import ru.tpgeovk.back.model.FullPlaceInfo;
 import ru.tpgeovk.back.model.GroupInfo;
 import ru.tpgeovk.back.model.PlaceInfo;
+import ru.tpgeovk.back.model.UserInfo;
 import ru.tpgeovk.back.model.response.ErrorResponse;
 import ru.tpgeovk.back.service.RecommendationService;
 import ru.tpgeovk.back.service.TokenService;
@@ -51,7 +52,7 @@ public class RecommendController {
         }
     }
 
-    @RequestMapping(path = "/recommend/groups/byCheckins", method = RequestMethod.GET)
+    @RequestMapping(path = "/recommend/friends/byCheckins", method = RequestMethod.GET)
     public ResponseEntity getGroupByCheckins(@RequestParam(value = "token") String token) {
 
         UserActor actor = tokenService.getUser(token);
@@ -61,7 +62,8 @@ public class RecommendController {
 
         try {
             List<Integer> users = recommendationService.getUsersFromCheckins(actor);
-            Map<Integer, List<Integer>> result = recommendationService.getSimilarUsers(actor, users);
+            Map<Integer, List<Integer>> usersGroups = recommendationService.getSimilarUsers(actor, users);
+            List<UserInfo> result = recommendationService.getSimilarUsersInfo(actor, usersGroups);
             return ResponseEntity.ok(result);
         } catch (VkException e) {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));

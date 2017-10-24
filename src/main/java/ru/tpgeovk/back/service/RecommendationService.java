@@ -15,6 +15,7 @@ import com.vk.api.sdk.objects.groups.GroupFull;
 import com.vk.api.sdk.objects.places.Checkin;
 import com.vk.api.sdk.objects.places.PlaceFull;
 import com.vk.api.sdk.objects.places.responses.GetCheckinsResponse;
+import com.vk.api.sdk.objects.users.UserFull;
 import com.vk.api.sdk.queries.groups.GroupField;
 import com.vk.api.sdk.queries.groups.GroupsGetFilter;
 import com.vk.api.sdk.queries.groups.GroupsGetMembersFilter;
@@ -194,6 +195,7 @@ public class RecommendationService {
     }
 
     public Map<Integer, List<Integer>> getSimilarUsers(UserActor actor, List<Integer> userIds) throws VkException {
+        Integer maxCommon = 0;
         Map<Integer, List<Integer>> commonGroups = new HashMap<>();
         for (Integer id : userIds) {
             commonGroups.put(id, new ArrayList<>());
@@ -248,9 +250,14 @@ public class RecommendationService {
                             JsonObject memberObject = member.getAsJsonObject();
                             Integer userId = memberObject.getAsJsonPrimitive("user_id")
                                     .getAsInt();
-                            List<Integer> groupList = commonGroups.get(userId);
-                            if (memberObject.getAsJsonPrimitive("member").getAsInt() == 1) {
-                                groupList.add(groupId);
+                            if (!userId.equals(actor.getId())) {
+                                List<Integer> groupList = commonGroups.get(userId);
+                                if (memberObject.getAsJsonPrimitive("member").getAsInt() == 1) {
+                                    groupList.add(groupId);
+                                    if (groupList.size() > maxCommon) {
+                                        maxCommon = groupList.size();
+                                    }
+                                }
                             }
                         }
                     }
@@ -258,11 +265,43 @@ public class RecommendationService {
             }
         }
 
+        final Integer threshold = maxCommon / 3;
         return commonGroups.entrySet().stream()
-                .filter(a -> (a.getValue().size() != 0) && (!a.getKey().equals(actor.getId())))
+                .filter(a -> (a.getValue().size() != 0) && (a.getValue().size() >= threshold) &&
+                        (!a.getKey().equals(actor.getId())))
                 .sorted((a,b) -> (a.getValue().size() - b.getValue().size()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
                         (oldValue, newValue) -> oldValue, HashMap::new));
+    }
+
+    public List<UserInfo> getSimilarUsersInfo(UserActor actor, Map<Integer, List<Integer>> userGroups) throws VkException {
+        List<Integer> userIds = new ArrayList<>();
+        userIds.addAll(userGroups.keySet());
+
+        int start = 0;
+        int end = 10000;
+        String script;
+        JsonElement response;
+        List<UserFull> users = new ArrayList<>();
+        while (start < userIds.size()) {
+            if (end > userIds.size()) {
+                end = userIds.size();
+            }
+            List<Integer> currentIds = userIds.subList(start, end);
+            start = start + 1000;
+            end = end + 1000;
+
+            script = "return API.users.get({\"user_ids\":" + currentIds.toString() + ",\"fields\":\"photo_200\"});";
+            try {
+                response = vk.execute().code(actor, script).execute();
+            } catch (ApiException | ClientException e) {
+                e.printStackTrace();
+                throw new VkException(e.getMessage(), e);
+            }
+            users.addAll(gson.fromJson(response, new TypeToken<List<UserFull>>(){}.getType()));
+        }
+
+        return users.stream().map(a -> UserInfo.fromUserFull(a)).collect(Collectors.toList());
     }
 
 
