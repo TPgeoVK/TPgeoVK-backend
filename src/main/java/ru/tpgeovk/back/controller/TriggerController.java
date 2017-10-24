@@ -54,12 +54,12 @@ public class TriggerController {
 
         UserActor actor = tokenService.getUser(token);
         if (actor == null) {
-            return ResponseEntity.ok(new ErrorResponse("User not authenticated"));
+            return ResponseEntity.badRequest().body(new ErrorResponse("User not authenticated"));
         }
 
         TaskStatus task = backgroundService.getStatus(actor.getAccessToken());
         if (task == null) {
-            return ResponseEntity.ok(new ErrorResponse("No triggered task"));
+            return ResponseEntity.badRequest().body(new ErrorResponse("No triggered task"));
         }
 
         return ResponseEntity.ok(task);
