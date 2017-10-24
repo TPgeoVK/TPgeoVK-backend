@@ -16,6 +16,7 @@ import ru.tpgeovk.back.exception.VkException;
 import ru.tpgeovk.back.model.FullPlaceInfo;
 import ru.tpgeovk.back.text.TextProcessor;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -24,15 +25,30 @@ import java.util.stream.Collectors;
 public class PlaceService {
 
     private final TokenService tokenService;
+    private final UsersDataService usersDataService;
 
     private final VkApiClient vk;
 
     private final TextProcessor textProcessor = new TextProcessor();
 
     @Autowired
-    public PlaceService(TokenService tokenService) {
+    public PlaceService(TokenService tokenService,
+                        UsersDataService usersDataService) {
         this.tokenService = tokenService;
+        this.usersDataService = usersDataService;
         vk = VkContext.getVkApiClient();
+    }
+
+
+    public FullPlaceInfo detectPlace(UserActor actor, String text) {
+        List<FullPlaceInfo> nearstPlaces = new ArrayList<>(usersDataService.getRecommendedNearestPlaces(
+                actor.getAccessToken()));
+
+        nearstPlaces.forEach(a -> a.setTextRating(textProcessor.fuzzyContainRating(a.getTitle(), text)));
+
+        return nearstPlaces.stream()
+                .max(Comparator.comparing(FullPlaceInfo::calculateRating))
+                .get();
     }
 
     public List<FullPlaceInfo> getPlaces(Float lat, Float lon, String text, UserActor actor)

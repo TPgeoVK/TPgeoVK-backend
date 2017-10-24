@@ -10,6 +10,7 @@ import ru.tpgeovk.back.model.request.PredictRequest;
 import ru.tpgeovk.back.model.response.ErrorResponse;
 import ru.tpgeovk.back.service.PlaceService;
 import ru.tpgeovk.back.service.TokenService;
+import ru.tpgeovk.back.service.UsersDataService;
 
 import java.util.List;
 
@@ -33,21 +34,7 @@ public class LocationController {
             return ResponseEntity.ok(new ErrorResponse("User not authenticated"));
         }
 
-        List<FullPlaceInfo> places = null;
-
-        try {
-            places = placeService.getPlaces(request.getLatitude(), request.getLongitude(),
-                    request.getText(), actor);
-        } catch (VkException e) {
-            e.printStackTrace();
-            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
-        }
-
-        if (places == null) {
-            return ResponseEntity.badRequest().body(new ErrorResponse("No places near your location!"));
-        }
-
-        FullPlaceInfo predictedPlace = placeService.predictPlace(places);
+        FullPlaceInfo predictedPlace = placeService.detectPlace(actor, request.getText());
 
         return ResponseEntity.ok(predictedPlace);
     }

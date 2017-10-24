@@ -41,7 +41,7 @@ public class FullPlaceInfo {
 
     public Integer calculateRating() {
         /** TODO: обучить коэффициенты */
-        return 5*(MAX_DISTANCE - distance) + 5*userCheckinsCount + 4*friendsCheckinsCount + 4*checkinsCount + 3*textRating;
+        return 5*(MAX_DISTANCE - distance) + 3*textRating;
     }
 
     public void updateUserCheckinsCount() {
