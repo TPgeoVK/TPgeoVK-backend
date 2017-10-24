@@ -16,6 +16,7 @@ import ru.tpgeovk.back.model.UserInfo;
 import ru.tpgeovk.back.model.response.ErrorResponse;
 import ru.tpgeovk.back.service.RecommendationService;
 import ru.tpgeovk.back.service.TokenService;
+import ru.tpgeovk.back.service.UsersDataService;
 
 import java.util.List;
 import java.util.Map;
@@ -25,11 +26,15 @@ public class RecommendController {
 
     private final TokenService tokenService;
     private final RecommendationService recommendationService;
+    private final UsersDataService usersDataService;
 
     @Autowired
-    public RecommendController(TokenService tokenService, RecommendationService recommendationService) {
+    public RecommendController(TokenService tokenService,
+                               RecommendationService recommendationService,
+                               UsersDataService usersDataService) {
         this.tokenService = tokenService;
         this.recommendationService = recommendationService;
+        this.usersDataService = usersDataService;
     }
 
     @RequestMapping(path = "/recommend/event/byFriends", method = RequestMethod.GET)
@@ -52,7 +57,7 @@ public class RecommendController {
         }
     }
 
-    @RequestMapping(path = "/recommend/friends/byCheckins", method = RequestMethod.GET)
+    @RequestMapping(path = "/recommend/friends", method = RequestMethod.GET)
     public ResponseEntity getGroupByCheckins(@RequestParam(value = "token") String token) {
 
         UserActor actor = tokenService.getUser(token);
@@ -60,32 +65,17 @@ public class RecommendController {
             return ResponseEntity.ok(new ErrorResponse("User not authenticated"));
         }
 
-        try {
-            List<Integer> users = recommendationService.getUsersFromCheckins(actor);
-            Map<Integer, List<Integer>> usersGroups = recommendationService.getSimilarUsers(actor, users);
-            List<UserInfo> result = recommendationService.getSimilarUsersInfo(actor, usersGroups);
-            return ResponseEntity.ok(result);
-        } catch (VkException e) {
-            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
-        }
+        return ResponseEntity.ok(usersDataService.getRecommendedFriends(token));
     }
 
     @RequestMapping(path = "/recommend/places/nearest", method = RequestMethod.GET)
-    public ResponseEntity getPlaceByCheckins(@RequestParam(value = "token") String token,
-                                             @RequestParam(value = "latitude") String latitude,
-                                             @RequestParam(value = "longitude") String longitude) {
+    public ResponseEntity getPlaceByCheckins(@RequestParam(value = "token") String token) {
 
         UserActor actor = tokenService.getUser(token);
         if (actor == null) {
             return ResponseEntity.ok(new ErrorResponse("User not authenticated"));
         }
 
-        try {
-            List<FullPlaceInfo> result = recommendationService.recommendNearestPlaces(actor, Float.parseFloat(latitude),
-                    Float.parseFloat(longitude));
-            return ResponseEntity.ok(result);
-        } catch (VkException e) {
-            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
-        }
+        return ResponseEntity.ok(usersDataService.getRecommendedNearestPlaces(token));
     }
 }
