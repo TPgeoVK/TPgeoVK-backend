@@ -26,4 +26,8 @@ public class TokenService  {
 
         return user;
     }
+
+    public void remove(String  token) {
+        tokenToUser.remove(token);
+    }
 }

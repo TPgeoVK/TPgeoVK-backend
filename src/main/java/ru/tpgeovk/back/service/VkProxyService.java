@@ -32,6 +32,12 @@ import java.util.stream.Collectors;
 @Service
 public class VkProxyService {
 
+    private static final String CREATE_CHECKIN = "var userId = %d;\nvar placeId = %d;\n" +
+            "return API.places.checkin({\"place_id\": placeId});";
+    private static final String CREATE_CHECKIN_TEXT = "var userId = %d;\nvar placeId = %d;\nvar text = \"%s\";\n" +
+            "return API.places.checkin({\"place_id\": placeId, \"text\": text});";
+
+
     private static final long QUARTER_OFFSET = 300; //5 min.
 
     private final VkApiClient vk;
@@ -150,18 +156,18 @@ public class VkProxyService {
     }
 
     public CheckinInfo createPost(UserActor actor, Integer placeId, String text) throws VkException {
-        Integer checkinId;
+        JsonElement response;
+        String script = StringUtils.isEmpty(text) ? String.format(CREATE_CHECKIN, actor.getId(), placeId) :
+                String.format(CREATE_CHECKIN_TEXT, actor.getId(), placeId, text);
         try {
-            checkinId = StringUtils.isEmpty(text) ? vk.places().checkin(actor).placeId(placeId).execute().getId() :
-                    vk.places().checkin(actor).placeId(placeId).text(text).execute().getId();
+            response = vk.execute().code(actor, script).execute();
         } catch (ApiException | ClientException e) {
             e.printStackTrace();
             throw new VkException(e.getMessage(), e);
         }
+        Integer postId = response.getAsInt();
 
-        String script = "return API.wall.getById({\"posts\":" + actor.getId().toString() + "_" + checkinId.toString() +
-                "})[0];\n";
-        JsonElement response;
+        script = "return API.wall.getById({\"posts\":\"" + actor.getId().toString() + "_" + postId.toString() + "\"})[0];";
         try {
             response = vk.execute().code(actor, script).execute();
         } catch (ApiException | ClientException e) {

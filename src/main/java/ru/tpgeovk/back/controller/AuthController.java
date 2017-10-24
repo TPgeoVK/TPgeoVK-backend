@@ -1,58 +1,58 @@
 package ru.tpgeovk.back.controller;
 
+import com.google.gson.*;
+import com.vk.api.sdk.client.ClientResponse;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.exceptions.ApiException;
 import com.vk.api.sdk.exceptions.ClientException;
+import com.vk.api.sdk.httpclient.HttpTransportClient;
 import com.vk.api.sdk.objects.UserAuthResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.json.GsonBuilderUtils;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 import ru.tpgeovk.back.contexts.VkContext;
+import ru.tpgeovk.back.model.request.TokenRequest;
+import ru.tpgeovk.back.model.response.ErrorResponse;
 import ru.tpgeovk.back.service.TokenService;
+
+import java.io.IOException;
 
 @Controller
 public class AuthController {
 
-    private static final String ENV_DEPLOY_URL = "TPGEOVK_DEPLOY_URL";
-
-    private static final String SERVER_URL;
-
-    private static final String CODE_REDIRECT_URI;
     private static final String OAUTH_REDIRECT_URI;
 
-    private static final String REDIRECT_SUCCESS;
-    private static final String REDIRECT_ERROR;
-
     static {
-        SERVER_URL = System.getenv(ENV_DEPLOY_URL);
-        if (SERVER_URL == null) {
-            throw new RuntimeException("Environment variable TPGEOVK_DEPLOY_URL is wrong or not set");
-        }
 
-        CODE_REDIRECT_URI = SERVER_URL.concat("/auth/callback");
         OAUTH_REDIRECT_URI = "https://oauth.vk.com/authorize?" +
                 "client_id=" + VkContext.getAppId() +
-                "&redirect_uri=" + CODE_REDIRECT_URI +
+                "&redirect_uri=https://oauth.vk.com/blank.html" +
                 "&display=mobile" +
                 "&scope=" + VkContext.getScope() +
-                "&response_type=code" +
+                "&response_type=token" +
                 "&v=" + VkContext.getApiVersion();
 
-        REDIRECT_SUCCESS = SERVER_URL.concat("/auth/callback/success");
-        REDIRECT_ERROR = SERVER_URL.concat("/auth/callback/error");
     }
 
     private final TokenService tokenService;
 
     private final VkApiClient vk = VkContext.getVkApiClient();
 
+    private final HttpTransportClient httpTransportClient;
+    private final Gson gson;
+
+
     @Autowired
     public AuthController(TokenService tokenService) {
         this.tokenService = tokenService;
+        httpTransportClient = new HttpTransportClient();
+        gson = new GsonBuilder().create();
     }
 
     @RequestMapping(path = "/auth", method = RequestMethod.GET)
@@ -60,48 +60,39 @@ public class AuthController {
         return new ModelAndView("redirect:" + OAUTH_REDIRECT_URI);
     }
 
-    @RequestMapping(path = "/auth/callback", method = RequestMethod.GET)
-    public ModelAndView authCodeCallback(@RequestParam(value = "code") String code) {
-        UserAuthResponse response = null;
-
+    @RequestMapping(path = "/auth/login", method = RequestMethod.POST)
+    public ResponseEntity login(@RequestBody TokenRequest request) {
+        Integer userId;
+        String token = request.getToken();
         try {
-            response = vk.oauth().userAuthorizationCodeFlow(VkContext.getAppId(),
-                    VkContext.getSecureKey(), CODE_REDIRECT_URI, code)
-                    .execute();
-        } catch (ApiException | ClientException e) {
-            e.printStackTrace();;
-            return new ModelAndView("redirect:" + REDIRECT_ERROR + "?message=" + e.getMessage());
+            userId = resolveUser(token);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
-
-        Integer userId = response.getUserId();
-        String token = response.getAccessToken();
 
         tokenService.put(token, userId);
 
-        return new ModelAndView("redirect:" + REDIRECT_SUCCESS + "?token=" + token);
-    }
-
-    @RequestMapping(path = "/auth/callback/success", method = RequestMethod.GET)
-    public ResponseEntity authSuccess(@RequestParam(value = "token") String token) {
-        /** Метод нужен только для задания URL'а с токеном и id пользователя */
         return ResponseEntity.ok(null);
     }
 
-    @RequestMapping(path = "/auth/callback/error", method = RequestMethod.GET)
-    public ResponseEntity authError(@RequestParam(value = "message") String message) {
-        /** Метод нужен только для задания URL'а с сообщением об ошибке */
+    @RequestMapping(path = "/auth/logout", method = RequestMethod.POST)
+    public ResponseEntity logout(@RequestBody TokenRequest request) {
+        tokenService.remove(request.getToken());
         return ResponseEntity.ok(null);
     }
 
-    private class UserIdResponse {
-        private Integer userId;
 
-        public UserIdResponse(Integer userId) {
-            this.userId = userId;
+    private Integer resolveUser(String token) throws IOException {
+        String url = "https://api.vk.com/method/users.get?access_token=" + token + "&v=" + VkContext.getApiVersion();
+        String response = httpTransportClient.get(url).getContent();
+        JsonParser parser = new JsonParser();
+        JsonObject jsonObject = parser.parse(response).getAsJsonObject();
+        if ((jsonObject.getAsJsonArray("response") == null) ||
+                (jsonObject.getAsJsonArray("response").size() == 0)) {
+            return null;
         }
-
-        public Integer getUserId() {
-            return userId;
-        }
+        return jsonObject.getAsJsonArray("response").get(0)
+                .getAsJsonObject().getAsJsonPrimitive("id").getAsInt();
     }
 }
