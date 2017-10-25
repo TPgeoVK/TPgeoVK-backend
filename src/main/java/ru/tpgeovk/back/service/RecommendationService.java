@@ -73,17 +73,13 @@ public class RecommendationService {
             "i = i + 1;\n" +
             "}\nreturn res;";
 
-    private static final String GROUPS_SEARCH = "var groups = %s;\n" +
-            "var i = 0;\n" +
+    private static final String GROUPS_SEARCH = "var group = \"%s\";\n" +
             "var groupIds = [];\n" +
-            "while (i < groups.length) {\n" +
-            "var found = API.groups.search({\"q\":groups[i],\"future\":true});\n" +
-            "if (found.count != 0) {\n" +
+            "var found = API.groups.search({\"q\":group});\n" +
+            "if (found.count == 0) { return []; }\n" +
             "groupIds = groupIds + [found.items[0].id];\n" +
             "if (found.count > 1) { groupIds = groupIds + [found.items[1].id]; }\n" +
             "if (found.count > 2) { groupIds = groupIds + [found.items[2].id]; }\n" +
-            "i = i + 1;\n" +
-            "}\n}\n" +
             "var groupsFull = API.groups.getById({\"group_ids\": groupIds, \"fields\":\"description,members_count,place\"});\n" +
             "return groupsFull;";
 
@@ -460,7 +456,7 @@ public class RecommendationService {
 
         List<String> allTitles = checkins.stream()
                 .filter(a -> (a.getPlace() != null) && (!StringUtils.isEmpty(a.getPlace().getTitle())))
-                .map(a -> a.getPlace().getTitle())
+                .map(a -> TextProcessor.filterText(a.getPlace().getTitle()))
                 .collect(Collectors.toList());
         if (allTitles.size() == 0) {
             return result;
@@ -468,23 +464,12 @@ public class RecommendationService {
 
         JsonElement response = null;
         String script;
-        int start = 0;
-        int end = 23;
-        loop1: while (start < allTitles.size()) {
-            if (end > allTitles.size()) {
-                end = allTitles.size();
-            }
-            List<String> currentTitles = allTitles.subList(start, end).stream()
-                    .map(a -> "\"" + a + "\"")
-                    .collect(Collectors.toList());
-            start = start + 23;
-            end = end + 23;
-
-            if (currentTitles.isEmpty()) {
+        loop1: for (String title : allTitles) {
+            if (StringUtils.isEmpty(title)) {
                 continue loop1;
             }
 
-            script = String.format(GROUPS_SEARCH, currentTitles.toString());
+            script = String.format(GROUPS_SEARCH, title);
             boolean ok = false;
             loop2: while (!ok) {
                 try {
