@@ -9,6 +9,7 @@ public class UserInfo {
     private Integer id;
     private String firstName;
     private String lastName;
+    private String activities;
     private String photo200;
     private String photo200Base64;
 
@@ -17,6 +18,7 @@ public class UserInfo {
         result.setId(userFull.getId());
         result.setFirstName(userFull.getFirstName());
         result.setLastName(userFull.getLastName());
+        result.setActivities(userFull.getActivities());
         result.setPhoto200(userFull.getPhoto200());
 
         return result;
@@ -24,10 +26,11 @@ public class UserInfo {
 
     public UserInfo() { }
 
-    public UserInfo(Integer id, String firstName, String lastName, String photo200) {
+    public UserInfo(Integer id, String firstName, String lastName, String activities, String photo200) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
+        this.activities = activities;
         this.photo200 = photo200;
         this.photo200Base64 = Base64.getEncoder().encodeToString(photo200.getBytes());
     }
@@ -55,6 +58,10 @@ public class UserInfo {
     public void setLastName(String lastName) {
         this.lastName = lastName;
     }
+
+    public String getActivities() { return activities; }
+
+    public void setActivities(String activities) { this.activities = activities; }
 
     public String getPhoto200() {
         return photo200;

@@ -87,6 +87,7 @@ public class CheckinInfo {
                 userFull.getId(),
                 userFull.getFirstName(),
                 userFull.getLastName(),
+                userFull.getActivities(),
                 userFull.getPhoto200()
         );
         result.setUser(userInfo);
