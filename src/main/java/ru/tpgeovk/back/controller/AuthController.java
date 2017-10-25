@@ -49,8 +49,6 @@ public class AuthController {
     }
 
     private final TokenService tokenService;
-    private final VkProxyService vkProxyService;
-    private final UsersDataService usersDataService;
 
     private final VkApiClient vk = VkContext.getVkApiClient();
 
@@ -59,12 +57,8 @@ public class AuthController {
 
 
     @Autowired
-    public AuthController(TokenService tokenService,
-                          VkProxyService vkProxyService,
-                          UsersDataService usersDataService) {
+    public AuthController(TokenService tokenService) {
         this.tokenService = tokenService;
-        this.vkProxyService = vkProxyService;
-        this.usersDataService = usersDataService;
         httpTransportClient = new HttpTransportClient();
         gson = new GsonBuilder().create();
     }
@@ -89,14 +83,6 @@ public class AuthController {
         }
 
         tokenService.put(token, userId);
-        UserActor actor = tokenService.getUser(token);
-        usersDataService.createForUser(token);
-        try {
-            List<CheckinInfo> userCheckins = vkProxyService.getAllUserCheck(actor);
-            usersDataService.getCheckins(token).addAll(userCheckins);
-        } catch (VkException e) {
-            e.printStackTrace();
-        }
 
         return ResponseEntity.ok(null);
     }
