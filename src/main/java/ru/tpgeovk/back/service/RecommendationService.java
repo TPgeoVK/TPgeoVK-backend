@@ -466,11 +466,11 @@ public class RecommendationService {
             return result;
         }
 
-        JsonElement response;
+        JsonElement response = null;
         String script;
         int start = 0;
         int end = 23;
-        while (start < allTitles.size()) {
+        loop1: while (start < allTitles.size()) {
             if (end > allTitles.size()) {
                 end = allTitles.size();
             }
@@ -480,23 +480,31 @@ public class RecommendationService {
             start = start + 23;
             end = end + 23;
 
+            if (currentTitles.isEmpty()) {
+                continue loop1;
+            }
+
             script = String.format(GROUPS_SEARCH, currentTitles.toString());
-            try {
-                response = vk.execute().code(actor, script).execute();
-            } catch (ApiException | ClientException e) {
-                if (e instanceof ApiTooManyException) {
-                    try {
-                        Thread.currentThread().sleep(50);
-                        continue;
-                    } catch (InterruptedException e1) {
-                        Thread.currentThread().interrupt();
+            boolean ok = false;
+            loop2: while (!ok) {
+                try {
+                    response = vk.execute().code(actor, script).execute();
+                    ok = true;
+                } catch (ApiException | ClientException e) {
+                    if (e instanceof ApiTooManyException) {
+                        try {
+                            Thread.currentThread().sleep(50);
+                            continue loop2;
+                        } catch (InterruptedException e1) {
+                            Thread.currentThread().interrupt();
+                        }
                     }
+                    e.printStackTrace();
+                    throw new VkException(e.getMessage(), e);
                 }
-                e.printStackTrace();
-                throw new VkException(e.getMessage(), e);
             }
             if (response.getAsJsonArray().size() == 0) {
-                continue;
+                continue loop1;
             }
 
             List<GroupFull> groups = gson.fromJson(response, new TypeToken<List<GroupFull>>(){}.getType());
