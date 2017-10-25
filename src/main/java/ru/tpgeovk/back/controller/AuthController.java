@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.json.GsonBuilderUtils;
 import org.springframework.stereotype.Controller;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -77,6 +78,9 @@ public class AuthController {
     public ResponseEntity login(@RequestBody TokenRequest request) {
         Integer userId;
         String token = request.getToken();
+        if (StringUtils.isEmpty(token)) {
+            return ResponseEntity.badRequest().body(new ErrorResponse("Error: Empty token"));
+        }
         try {
             userId = resolveUser(token);
         } catch (IOException e) {
@@ -99,6 +103,9 @@ public class AuthController {
 
     @RequestMapping(path = "/auth/logout", method = RequestMethod.POST)
     public ResponseEntity logout(@RequestBody TokenRequest request) {
+        if (StringUtils.isEmpty(request.getToken())) {
+            return ResponseEntity.badRequest().body(new ErrorResponse("Error: Empty token"));
+        }
         tokenService.remove(request.getToken());
         return ResponseEntity.ok(null);
     }
