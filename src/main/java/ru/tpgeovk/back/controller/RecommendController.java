@@ -9,15 +9,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ru.tpgeovk.back.exception.GoogleException;
 import ru.tpgeovk.back.exception.VkException;
-import ru.tpgeovk.back.model.FullPlaceInfo;
-import ru.tpgeovk.back.model.GroupInfo;
-import ru.tpgeovk.back.model.PlaceInfo;
-import ru.tpgeovk.back.model.UserInfo;
+import ru.tpgeovk.back.model.*;
 import ru.tpgeovk.back.model.response.ErrorResponse;
 import ru.tpgeovk.back.service.RecommendationService;
 import ru.tpgeovk.back.service.TokenService;
 import ru.tpgeovk.back.service.UsersDataService;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -58,14 +56,42 @@ public class RecommendController {
     }
 
     @RequestMapping(path = "/recommend/friends", method = RequestMethod.GET)
-    public ResponseEntity getGroupByCheckins(@RequestParam(value = "token") String token) {
+    public ResponseEntity getFriendsByCheckins(@RequestParam(value = "token") String token) {
 
         UserActor actor = tokenService.getUser(token);
         if (actor == null) {
             return ResponseEntity.ok(new ErrorResponse("User not authenticated"));
         }
 
-        return ResponseEntity.ok(usersDataService.getRecommendedFriends(token));
+        List<CheckinInfo> userCheckins = new ArrayList<>(usersDataService.getCheckins(token));
+
+        try {
+            List<Integer> users = recommendationService.getUsersFromCheckins(actor, userCheckins);
+            Map<Integer, List<Integer>> usersGroups = recommendationService.getSimilarUsers(actor, users);
+            List<UserInfo> friends= recommendationService.getSimilarUsersInfo(actor, usersGroups);
+
+            return ResponseEntity.ok(friends);
+        } catch (VkException e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        }
+    }
+
+    @RequestMapping(path = "/recommend/groups", method = RequestMethod.GET)
+    public ResponseEntity getGroupsByCheckins(@RequestParam(value = "token") String token) {
+
+        UserActor actor = tokenService.getUser(token);
+        if (actor == null) {
+            return ResponseEntity.ok(new ErrorResponse("User not authenticated"));
+        }
+
+        List<CheckinInfo> userCheckins = new ArrayList<>(usersDataService.getCheckins(token));
+
+        try {
+            List<GroupInfo> groups = recommendationService.recommendGroupsByCheckins(actor, userCheckins);
+            return ResponseEntity.ok(groups);
+        } catch (VkException e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
+        }
     }
 
     @RequestMapping(path = "/recommend/places/nearest", method = RequestMethod.GET)

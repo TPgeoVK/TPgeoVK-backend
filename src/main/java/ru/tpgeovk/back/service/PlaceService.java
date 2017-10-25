@@ -39,14 +39,12 @@ public class PlaceService {
         vk = VkContext.getVkApiClient();
     }
 
+    public FullPlaceInfo detectPlace(UserActor actor, List<FullPlaceInfo> nearestPlaces, String text) {
 
-    public FullPlaceInfo detectPlace(UserActor actor, String text) {
-        List<FullPlaceInfo> nearstPlaces = new ArrayList<>(usersDataService.getRecommendedNearestPlaces(
-                actor.getAccessToken()));
 
-        nearstPlaces.forEach(a -> a.setTextRating(textProcessor.fuzzyContainRating(a.getTitle(), text)));
+        nearestPlaces.forEach(a -> a.setTextRating(textProcessor.fuzzyContainRating(a.getTitle(), text)));
 
-        return nearstPlaces.stream()
+        return nearestPlaces.stream()
                 .max(Comparator.comparing(FullPlaceInfo::calculateRating))
                 .get();
     }

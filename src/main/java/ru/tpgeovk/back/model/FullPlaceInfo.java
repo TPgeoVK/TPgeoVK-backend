@@ -18,6 +18,7 @@ public class FullPlaceInfo {
     private Integer userCheckinsCount;
     private Integer friendsCheckinsCount;
     private Integer textRating;
+    private Integer similarityRating;
 
     public static FullPlaceInfo fromPlaceFull(PlaceFull placeFull) {
         FullPlaceInfo result = new FullPlaceInfo();
@@ -33,6 +34,26 @@ public class FullPlaceInfo {
         result.setUserCheckinsCount(0);
         result.setFriendsCheckinsCount(0);
         result.setTextRating(0);
+        result.setSimilarityRating(0);
+
+        return result;
+    }
+
+    public static FullPlaceInfo fromPlaceFull(PlaceFull placeFull, Integer similarityRating) {
+        FullPlaceInfo result = new FullPlaceInfo();
+        result.setId(placeFull.getId());
+        result.setTitle(placeFull.getTitle());
+        result.setLatitude(placeFull.getLatitude());
+        result.setLongitude(placeFull.getLongitude());
+        result.setPlaceIcon(placeFull.getIcon());
+        result.setDistance(placeFull.getDistance());
+        result.setCheckinsCount(placeFull.getCheckins());
+        result.setGroupId(placeFull.getGroupId());
+        result.setGroupPhoto(placeFull.getGroupPhoto());
+        result.setUserCheckinsCount(0);
+        result.setFriendsCheckinsCount(0);
+        result.setTextRating(0);
+        result.setSimilarityRating(similarityRating);
 
         return result;
     }
@@ -41,7 +62,7 @@ public class FullPlaceInfo {
 
     public Integer calculateRating() {
         /** TODO: обучить коэффициенты */
-        return 5*(MAX_DISTANCE - distance) + 3*textRating;
+        return 5*(MAX_DISTANCE - distance) + 4*similarityRating + 3*textRating;
     }
 
     public void updateUserCheckinsCount() {
@@ -139,4 +160,8 @@ public class FullPlaceInfo {
     public void setTextRating(Integer textRating) {
         this.textRating = textRating;
     }
+
+    public Integer getSimilarityRating() { return similarityRating; }
+
+    public void setSimilarityRating(Integer similarityRating) { this.similarityRating = similarityRating; }
 }

@@ -113,8 +113,13 @@ public class RecommendationService {
             "var i = 0;\n" +
             "var groupIds = [];\n" +
             "while (i < groups.length) {\n" +
-            "var found = API.groups.search({\"q\":groups[i]});\n" +
-            "if (found.count != 0) { groupIds = groupIds + [found.items[0].id]; }\n}\n" +
+            "var found = API.groups.search({\"q\":groups[i],\"future\":true});\n" +
+            "if (found.count != 0) {\n" +
+            "groupIds = groupIds + [found.items[0].id];\n" +
+            "if (found.count > 1) { groupIds = groupIds + [found.items[1].id]; }\n" +
+            "if (found.count > 2) { groupIds = groupIds + [found.items[2].id]; }\n" +
+            "i = i + 1;\n" +
+            "}\n}\n" +
             "var groupsFull = API.groups.getById({\"group_ids\": groupIds, \"fields\":\"description,members_count,place\"});\n" +
             "return groupsFull;";
 
@@ -165,8 +170,10 @@ public class RecommendationService {
         return events.stream().filter(a -> !a.getFriendsCount().equals(0)).collect(Collectors.toList());
     }
 
-    public List<Integer> getUsersFromCheckins(UserActor actor) throws VkException {
-        List<CheckinInfo> userCheckins = vkProxyService.getAllUserCheck(actor);
+    public List<Integer> getUsersFromCheckins(UserActor actor, List<CheckinInfo> userCheckins) throws VkException {
+        if ((userCheckins == null) || (userCheckins.size() == 0)) {
+            userCheckins = vkProxyService.getAllUserCheck(actor);
+        }
         List<Integer> users = new ArrayList<>();
         String script;
         JsonElement response;
@@ -375,7 +382,7 @@ public class RecommendationService {
         return placeRatings.entrySet().stream()
                 .filter(a -> !a.getValue().equals(0))
                 .sorted(Comparator.comparingInt(Map.Entry::getValue))
-                .map(a -> FullPlaceInfo.fromPlaceFull(a.getKey()))
+                .map(a -> FullPlaceInfo.fromPlaceFull(a.getKey(), a.getValue()))
                 .collect(Collectors.toList());
 
     }
@@ -428,7 +435,9 @@ public class RecommendationService {
             if (end > allTitles.size()) {
                 end = allTitles.size();
             }
-            List<String> currentTitles = allTitles.subList(start, end);
+            List<String> currentTitles = allTitles.subList(start, end).stream()
+                    .map(a -> "\"" + a + "\"")
+                    .collect(Collectors.toList());
             start = start + 23;
             end = end + 23;
 

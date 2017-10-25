@@ -3,6 +3,7 @@ package ru.tpgeovk.back.controller;
 import com.google.gson.*;
 import com.vk.api.sdk.client.ClientResponse;
 import com.vk.api.sdk.client.VkApiClient;
+import com.vk.api.sdk.client.actors.UserActor;
 import com.vk.api.sdk.exceptions.ApiException;
 import com.vk.api.sdk.exceptions.ClientException;
 import com.vk.api.sdk.httpclient.HttpTransportClient;
@@ -17,11 +18,17 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 import ru.tpgeovk.back.contexts.VkContext;
+import ru.tpgeovk.back.exception.VkException;
+import ru.tpgeovk.back.model.CheckinInfo;
 import ru.tpgeovk.back.model.request.TokenRequest;
 import ru.tpgeovk.back.model.response.ErrorResponse;
+import ru.tpgeovk.back.service.RecommendationService;
 import ru.tpgeovk.back.service.TokenService;
+import ru.tpgeovk.back.service.UsersDataService;
+import ru.tpgeovk.back.service.VkProxyService;
 
 import java.io.IOException;
+import java.util.List;
 
 @Controller
 public class AuthController {
@@ -41,6 +48,8 @@ public class AuthController {
     }
 
     private final TokenService tokenService;
+    private final VkProxyService vkProxyService;
+    private final UsersDataService usersDataService;
 
     private final VkApiClient vk = VkContext.getVkApiClient();
 
@@ -49,8 +58,12 @@ public class AuthController {
 
 
     @Autowired
-    public AuthController(TokenService tokenService) {
+    public AuthController(TokenService tokenService,
+                          VkProxyService vkProxyService,
+                          UsersDataService usersDataService) {
         this.tokenService = tokenService;
+        this.vkProxyService = vkProxyService;
+        this.usersDataService = usersDataService;
         httpTransportClient = new HttpTransportClient();
         gson = new GsonBuilder().create();
     }
@@ -72,6 +85,14 @@ public class AuthController {
         }
 
         tokenService.put(token, userId);
+        UserActor actor = tokenService.getUser(token);
+        usersDataService.createForUser(token);
+        try {
+            List<CheckinInfo> userCheckins = vkProxyService.getAllUserCheck(actor);
+            usersDataService.getCheckins(token).addAll(userCheckins);
+        } catch (VkException e) {
+            e.printStackTrace();
+        }
 
         return ResponseEntity.ok(null);
     }

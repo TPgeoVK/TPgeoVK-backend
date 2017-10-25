@@ -67,8 +67,8 @@ public class TextProcessor {
     }
 
     public int fuzzyContainRating(String needle, String text) {
-        needle = needle.toLowerCase().replace('#', ' ').replace('_', ' ');
-        text = text.toLowerCase().replace('#', ' ').replace('_', ' ');
+        needle = filterText(needle);
+        text = filterText(text);
 
         String[] words = needle.split("\\s+");
         int rating = 0;
