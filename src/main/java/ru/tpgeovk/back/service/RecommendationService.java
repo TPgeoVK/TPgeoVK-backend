@@ -21,6 +21,7 @@ import com.vk.api.sdk.queries.groups.GroupsGetFilter;
 import com.vk.api.sdk.queries.groups.GroupsGetMembersFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import ru.tpgeovk.back.contexts.VkContext;
 import ru.tpgeovk.back.exception.GoogleException;
 import ru.tpgeovk.back.exception.VkException;
@@ -107,6 +108,15 @@ public class RecommendationService {
             "userIds = userIds + API.places.getCheckins({\"place\":places.items[i].id});\n" +
             "i++;\n}\n" +
             "return userIds;";
+
+    private static final String GROUPS_SEARCH = "var groups = %s;\n" +
+            "var i = 0;\n" +
+            "var groupIds = [];\n" +
+            "while (i < groups.length) {\n" +
+            "var found = API.groups.search({\"q\":groups[i]});\n" +
+            "if (found.count != 0) { groupIds = groupIds + [found.items[0].id]; }\n}\n" +
+            "var groupsFull = API.groups.getById({\"group_ids\": groupIds, \"fields\":\"description,members_count,place\"});\n" +
+            "return groupsFull;";
 
     private final VkApiClient vk;
 
@@ -368,6 +378,84 @@ public class RecommendationService {
                 .map(a -> FullPlaceInfo.fromPlaceFull(a.getKey()))
                 .collect(Collectors.toList());
 
+    }
+
+    public List<GroupInfo> recommendGroupsByCheckins(UserActor actor, List<CheckinInfo> checkins) throws VkException {
+        List<GroupInfo> result = new ArrayList<>();
+
+        List<String> visitedGroupsIds = checkins.stream()
+                .filter(a -> (a.getPlace() != null) && (a.getPlace().getGroupId() != null) &&
+                        (!a.getPlace().getGroupId().equals(0)))
+                .map(a -> a.getPlace().getGroupId().toString())
+                .collect(Collectors.toList());
+
+        if (visitedGroupsIds.size() != 0) {
+            boolean requestOk = false;
+            List<GroupFull> response = null;
+            while (!requestOk) {
+                try {
+                    response = vk.groups().getById(actor).groupIds(visitedGroupsIds).execute();
+                    requestOk = true;
+                } catch (ApiException | ClientException e) {
+                    if (e instanceof ApiTooManyException) {
+                        try {
+                            Thread.currentThread().sleep(50);
+                            continue;
+                        } catch (InterruptedException e1) {
+                            Thread.currentThread().interrupt();
+                        }
+                    }
+                    e.printStackTrace();
+                    throw new VkException(e.getMessage(), e);
+                }
+            }
+            result.addAll(response.stream().map(a -> GroupInfo.fromGroupFull(a)).collect(Collectors.toList()));
+        }
+
+        List<String> allTitles = checkins.stream()
+                .filter(a -> (a.getPlace() != null) && (!StringUtils.isEmpty(a.getPlace().getTitle())))
+                .map(a -> a.getPlace().getTitle())
+                .collect(Collectors.toList());
+        if (allTitles.size() == 0) {
+            return result;
+        }
+
+        JsonElement response;
+        String script;
+        int start = 0;
+        int end = 23;
+        while (start < allTitles.size()) {
+            if (end > allTitles.size()) {
+                end = allTitles.size();
+            }
+            List<String> currentTitles = allTitles.subList(start, end);
+            start = start + 23;
+            end = end + 23;
+
+            script = String.format(GROUPS_SEARCH, currentTitles.toString());
+            try {
+                response = vk.execute().code(actor, script).execute();
+            } catch (ApiException | ClientException e) {
+                if (e instanceof ApiTooManyException) {
+                    try {
+                        Thread.currentThread().sleep(50);
+                        continue;
+                    } catch (InterruptedException e1) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+                e.printStackTrace();
+                throw new VkException(e.getMessage(), e);
+            }
+            if (response.getAsJsonArray().size() == 0) {
+                continue;
+            }
+
+            List<GroupFull> groups = gson.fromJson(response, new TypeToken<List<GroupFull>>(){}.getType());
+            result.addAll(groups.stream().map(a -> GroupInfo.fromGroupFull(a)).collect(Collectors.toList()));
+        }
+
+        return result;
     }
 
     public List<GroupInfo> getEventsInCity(Float latitude, Float longitude, UserActor actor) throws VkException,
