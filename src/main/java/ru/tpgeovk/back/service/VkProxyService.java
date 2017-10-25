@@ -54,17 +54,13 @@ public class VkProxyService {
         List<UserXtrCounters> usersResponse;
         try {
             usersResponse = vk.users().get(actor).userIds(actor.getId().toString())
-                    .fields(UserField.PHOTO_200, UserField.ACTIVITIES).execute();
+                    .fields(UserField.PHOTO_200, UserField.CAREER, UserField.UNIVERSITIES, UserField.SCHOOLS).execute();
         } catch (ApiException | ClientException e) {
             e.printStackTrace();
             throw new VkException(e.getMessage(), e);
         }
 
-        return new UserInfo(usersResponse.get(0).getId(),
-                            usersResponse.get(0).getFirstName(),
-                            usersResponse.get(0).getLastName(),
-                            usersResponse.get(0).getActivities(),
-                            usersResponse.get(0).getPhoto200());
+        return UserInfo.fromXtrCounters(usersResponse.get(0));
     }
 
     public List<CheckinInfo> getAllUserCheck(UserActor actor) throws VkException {
@@ -119,7 +115,7 @@ public class VkProxyService {
                         + longitude.toString() + ",\"timestamp\":" + String.valueOf(offsetTime) + "});\n")
                 .append("if (checkins.count == 0) { return [[],[]]; }\n")
                 .append("var posts = API.wall.getById({\"posts\":checkins.items@.id});\n")
-                .append("var users = API.users.get({\"user_ids\":posts@.from_id,\"fields\":\"photo_200,activities\"});")
+                .append("var users = API.users.get({\"user_ids\":posts@.from_id,\"fields\":\"photo_200,schools,career,universities\"});")
                 .append("return [posts,users];");
 
         String script = scriptBuilder.toString();

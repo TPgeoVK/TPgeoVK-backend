@@ -308,7 +308,7 @@ public class RecommendationService {
             start = start + 1000;
             end = end + 1000;
 
-            script = "return API.users.get({\"user_ids\":" + currentIds.toString() + ",\"fields\":\"photo_200\"});";
+            script = "return API.users.get({\"user_ids\":" + currentIds.toString() + ",\"fields\":\"photo_200,schools,career,universities\"});";
             try {
                 response = vk.execute().code(actor, script).execute();
             } catch (ApiException | ClientException e) {
