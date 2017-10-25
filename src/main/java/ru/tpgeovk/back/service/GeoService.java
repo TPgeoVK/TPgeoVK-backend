@@ -9,6 +9,7 @@ import com.google.maps.model.GeocodingResult;
 import com.google.maps.model.LatLng;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.UserActor;
+import com.vk.api.sdk.exceptions.ApiTooManyException;
 import com.vk.api.sdk.exceptions.ClientException;
 import com.vk.api.sdk.objects.base.Country;
 import com.vk.api.sdk.objects.database.responses.GetCitiesResponse;
@@ -61,12 +62,26 @@ public class GeoService {
     }
 
     public Integer resolveCityId(String city, String country, UserActor actor) throws VkException {
-        GetCountriesResponse countriesResponse;
-        try {
-            /** TODO: закэшировать в key-value хранилище */
-            countriesResponse = vk.database().getCountries(actor).execute();
-        } catch (com.vk.api.sdk.exceptions.ApiException | ClientException e) {
-            throw new VkException(e.getMessage(), e);
+        GetCountriesResponse countriesResponse = null;
+        boolean ok = false;
+        while (!ok) {
+            try {
+                /** TODO: закэшировать в key-value хранилище */
+                countriesResponse = vk.database().getCountries(actor).execute();
+                ok = true;
+            } catch (com.vk.api.sdk.exceptions.ApiException | ClientException e) {
+                if (e instanceof ApiTooManyException) {
+                    try {
+                        Thread.currentThread().sleep(50);
+                        continue;
+                    } catch (InterruptedException e1) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+                else {
+                    throw new VkException(e.getMessage(), e);
+                }
+            }
         }
         Optional<Country> countrySearch = countriesResponse.getItems().stream()
                 .filter((Country a) -> a.getTitle().toLowerCase().equals(country.toLowerCase()))
@@ -76,11 +91,25 @@ public class GeoService {
         }
         int countryId = countrySearch.get().getId();
 
-        GetCitiesResponse citiesResponse;
-        try {
-            citiesResponse = vk.database().getCities(actor, countryId).q(city).count(1).execute();
-        } catch (com.vk.api.sdk.exceptions.ApiException | ClientException e) {
-            throw new VkException(e.getMessage(), e);
+        GetCitiesResponse citiesResponse = null;
+        ok = false;
+        while (!ok) {
+            try {
+                citiesResponse = vk.database().getCities(actor, countryId).q(city).count(1).execute();
+                ok = true;
+            } catch (com.vk.api.sdk.exceptions.ApiException | ClientException e) {
+                if (e instanceof ApiTooManyException) {
+                    try {
+                        Thread.currentThread().sleep(50);
+                        continue;
+                    } catch (InterruptedException e1) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+                else {
+                    throw new VkException(e.getMessage(), e);
+                }
+            }
         }
         if (citiesResponse.getItems().isEmpty()) {
             return null;

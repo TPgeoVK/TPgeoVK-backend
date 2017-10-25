@@ -7,6 +7,7 @@ import com.google.gson.reflect.TypeToken;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.UserActor;
 import com.vk.api.sdk.exceptions.ApiException;
+import com.vk.api.sdk.exceptions.ApiTooManyException;
 import com.vk.api.sdk.exceptions.ClientException;
 import com.vk.api.sdk.objects.users.User;
 import com.vk.api.sdk.objects.users.UserFull;
@@ -86,12 +87,25 @@ public class VkProxyService {
 
         String script = scriptBuilder.toString();
 
-        JsonElement response;
-        try {
-            response = vk.execute().code(actor, script).execute();
-        } catch (ApiException | ClientException e) {
-            e.printStackTrace();
-            throw new VkException(e.getMessage(), e);
+        JsonElement response = null;
+        boolean ok = false;
+        while (!ok) {
+            try {
+                response = vk.execute().code(actor, script).execute();
+                ok = true;
+            } catch (ApiException | ClientException e) {
+                if (e instanceof ApiTooManyException) {
+                    try {
+                        Thread.currentThread().sleep(50);
+                        continue;
+                    } catch (InterruptedException e1) {
+                        Thread.currentThread().interrupt();
+                    }
+                } else {
+                    e.printStackTrace();
+                    throw new VkException(e.getMessage(), e);
+                }
+            }
         }
 
         List<VkWallpostFull> posts;
@@ -120,12 +134,25 @@ public class VkProxyService {
 
         String script = scriptBuilder.toString();
 
-        JsonElement response;
-        try {
-            response = vk.execute().code(actor, script).execute();
-        } catch (ApiException | ClientException e) {
-            e.printStackTrace();
-            throw new VkException(e.getMessage(), e);
+        JsonElement response = null;
+        boolean ok = false;
+        while (!ok) {
+            try {
+                response = vk.execute().code(actor, script).execute();
+                ok = true;
+            } catch (ApiException | ClientException e) {
+                if (e instanceof ApiTooManyException) {
+                    try {
+                        Thread.currentThread().sleep(50);
+                        continue;
+                    } catch (InterruptedException e1) {
+                        Thread.currentThread().interrupt();
+                    }
+                } else {
+                    e.printStackTrace();
+                    throw new VkException(e.getMessage(), e);
+                }
+            }
         }
 
         List<VkWallpostFull> posts;
@@ -141,12 +168,7 @@ public class VkProxyService {
         UserFull users[] = gson.fromJson(response.getAsJsonArray().get(1), UserFull[].class);
         int i = 0;
         for (CheckinInfo checkinInfo : result) {
-            checkinInfo.setUser(new UserInfo(
-                    users[i].getId(),
-                    users[i].getFirstName(),
-                    users[i].getLastName(),
-                    users[i].getActivities(),
-                    users[i].getPhoto200()));
+            checkinInfo.setUser(UserInfo.fromUserFull(users[i]));
             i++;
         }
 
@@ -154,23 +176,50 @@ public class VkProxyService {
     }
 
     public CheckinInfo createPost(UserActor actor, Integer placeId, String text) throws VkException {
-        JsonElement response;
+        JsonElement response = null;
         String script = StringUtils.isEmpty(text) ? String.format(CREATE_CHECKIN, actor.getId(), placeId) :
                 String.format(CREATE_CHECKIN_TEXT, actor.getId(), placeId, text);
-        try {
-            response = vk.execute().code(actor, script).execute();
-        } catch (ApiException | ClientException e) {
-            e.printStackTrace();
-            throw new VkException(e.getMessage(), e);
+
+        boolean ok = false;
+        while (!ok) {
+            try {
+                response = vk.execute().code(actor, script).execute();
+                ok = true;
+            } catch (ApiException | ClientException e) {
+                if (e instanceof ApiTooManyException) {
+                    try {
+                        Thread.currentThread().sleep(50);
+                        continue;
+                    } catch (InterruptedException e1) {
+                        Thread.currentThread().interrupt();
+                    }
+                } else {
+                    e.printStackTrace();
+                    throw new VkException(e.getMessage(), e);
+                }
+            }
         }
         Integer postId = response.getAsInt();
 
         script = "return API.wall.getById({\"posts\":\"" + actor.getId().toString() + "_" + postId.toString() + "\"})[0];";
-        try {
-            response = vk.execute().code(actor, script).execute();
-        } catch (ApiException | ClientException e) {
-            e.printStackTrace();
-            throw new VkException(e.getMessage(), e);
+        ok = false;
+        while (!ok) {
+            try {
+                response = vk.execute().code(actor, script).execute();
+                ok = true;
+            } catch (ApiException | ClientException e) {
+                if (e instanceof ApiTooManyException) {
+                    try {
+                        Thread.currentThread().sleep(50);
+                        continue;
+                    } catch (InterruptedException e1) {
+                        Thread.currentThread().interrupt();
+                    }
+                } else {
+                    e.printStackTrace();
+                    throw new VkException(e.getMessage(), e);
+                }
+            }
         }
         VkWallpostFull post = gson.fromJson(response, VkWallpostFull.class);
 

@@ -40,74 +40,10 @@ public class PlaceService {
     }
 
     public FullPlaceInfo detectPlace(UserActor actor, List<FullPlaceInfo> nearestPlaces, String text) {
-
-
         nearestPlaces.forEach(a -> a.setTextRating(textProcessor.fuzzyContainRating(a.getTitle(), text)));
 
         return nearestPlaces.stream()
                 .max(Comparator.comparing(FullPlaceInfo::calculateRating))
                 .get();
-    }
-
-    public List<FullPlaceInfo> getPlaces(Float lat, Float lon, String text, UserActor actor)
-            throws VkException {
-
-        /** Получаем все места в радиусе 300 метров */
-        SearchResponse response = null;
-        try {
-            response = vk.places().search(actor, lat, lon)
-                    .radius(1)
-                    .execute();
-        } catch (ApiException | ClientException e) {
-            throw new VkException(e);
-        }
-
-        /** Сортируем по расстоянию и преобразовываем в FullPlaceInfo */
-        List<FullPlaceInfo> places = response.getItems().stream()
-                .sorted(Comparator.comparing(PlaceFull::getDistance))
-                .map(FullPlaceInfo::fromPlaceFull)
-                .collect(Collectors.toList());
-
-        /** Получаем список друзей пользователя */
-        GetResponse friendsResponse = null;
-        try {
-            friendsResponse = vk.friends().get(actor)
-                    .order(FriendsGetOrder.HINTS)
-                    .execute();
-        } catch (ApiException | ClientException  e) {
-            throw new VkException(e);
-        }
-
-        GetCheckinsResponse checkinsResponse = null;
-        try {
-            /** Считаем количество чекинов друзей и пользователя в каждом месте */
-            for (FullPlaceInfo place : places) {
-                /** Issue #80 */
-                /*checkinsResponse = vk.places().getCheckins(actor)
-                        .place(place.getId())
-                        .execute();
-
-                for (Checkin checkin : checkinsResponse.getItems()) {
-                    if (friendsResponse.getItems().contains(checkin.getUserId())) {
-                        place.updateFriendsCheckinsCount();
-                    }
-                    if (checkin.getUserId().equals(actor.getId())) {
-                        place.updateUserCheckinsCount();
-                    }
-                } */
-
-                /** За одно считаем и встерчаемость названия места в тексте */
-                place.setTextRating(textProcessor.fuzzyContainRating(place.getTitle(), text));
-            }
-
-        } catch (Exception e) {
-            throw new VkException(e);
-        }
-
-        return places;
-    }
-
-    public FullPlaceInfo predictPlace(List<FullPlaceInfo> places) {
-        return places.stream().max(Comparator.comparing(FullPlaceInfo::calculateRating)).get();
     }
 }
