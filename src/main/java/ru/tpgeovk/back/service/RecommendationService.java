@@ -75,7 +75,7 @@ public class RecommendationService {
 
     private static final String GROUPS_SEARCH = "var group = \"%s\";\n" +
             "var groupIds = [];\n" +
-            "var found = API.groups.search({\"q\":group});\n" +
+            "var found = API.groups.search({\"q\":group,\"future\":true});\n" +
             "if (found.count == 0) { return []; }\n" +
             "groupIds = groupIds + [found.items[0].id];\n" +
             "if (found.count > 1) { groupIds = groupIds + [found.items[1].id]; }\n" +
@@ -464,6 +464,7 @@ public class RecommendationService {
 
         JsonElement response = null;
         String script;
+        List<GroupFull> groupFullResult = new ArrayList<>();
         loop1: for (String title : allTitles) {
             if (StringUtils.isEmpty(title)) {
                 continue loop1;
@@ -493,8 +494,13 @@ public class RecommendationService {
             }
 
             List<GroupFull> groups = gson.fromJson(response, new TypeToken<List<GroupFull>>(){}.getType());
-            result.addAll(groups.stream().map(a -> GroupInfo.fromGroupFull(a)).collect(Collectors.toList()));
+            groupFullResult.addAll(groups);
         }
+
+        groupFullResult = groupFullResult.stream()
+                .distinct()
+                .collect(Collectors.toList());
+        result.addAll(groupFullResult.stream().map(a -> GroupInfo.fromGroupFull(a)).collect(Collectors.toList()));
 
         return result;
     }

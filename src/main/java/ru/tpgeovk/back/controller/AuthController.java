@@ -122,7 +122,7 @@ public class AuthController {
             throw new IOException(response);
 
         }
-        
+
         return jsonObject.getAsJsonArray("response").get(0)
                 .getAsJsonObject().getAsJsonPrimitive("id").getAsInt();
     }
