@@ -4,6 +4,7 @@ import com.vk.api.sdk.client.actors.UserActor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.async.DeferredResult;
 import ru.tpgeovk.back.exception.VkException;
 import ru.tpgeovk.back.model.FullPlaceInfo;
 import ru.tpgeovk.back.model.PlaceInfo;
@@ -34,22 +35,28 @@ public class LocationController {
     }
 
     @RequestMapping(path = "/location/detectPlace", method = RequestMethod.POST, consumes = "application/json")
-    public ResponseEntity getPredictedPlace(@RequestBody PredictRequest request) {
+    public DeferredResult<ResponseEntity> getPredictedPlace(@RequestBody PredictRequest request) {
+        DeferredResult<ResponseEntity> defResult = new DeferredResult<>();
 
-        UserActor actor = tokenService.getUser(request.getToken());
-        if (actor == null) {
-            return ResponseEntity.ok(new ErrorResponse("User not authenticated"));
-        }
+        new Thread(() -> {
+            UserActor actor = tokenService.getUser(request.getToken());
+            if (actor == null) {
+                defResult.setResult(ResponseEntity.ok(new ErrorResponse("User not authenticated")));
+                return;
+            }
 
-        try {
-            List<FullPlaceInfo> nearestPlaces = recommendationService.recommendNearestPlaces(actor, request.getLatitude(),
-                    request.getLongitude());
-            FullPlaceInfo predictedPlace = placeService.detectPlace(actor, nearestPlaces, request.getText());
+            try {
+                List<FullPlaceInfo> nearestPlaces = recommendationService.recommendNearestPlaces(actor, request.getLatitude(),
+                        request.getLongitude());
+                FullPlaceInfo predictedPlace = placeService.detectPlace(actor, nearestPlaces, request.getText());
 
-            return ResponseEntity.ok(predictedPlace);
-        } catch (VkException e) {
-            e.printStackTrace();
-            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
-        }
+                defResult.setResult(ResponseEntity.ok(predictedPlace));
+            } catch (VkException e) {
+                e.printStackTrace();
+                defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage())));
+            }
+        }).start();
+
+        return defResult;
     }
 }

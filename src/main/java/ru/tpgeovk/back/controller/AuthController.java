@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.context.request.async.DeferredResult;
 import org.springframework.web.servlet.ModelAndView;
 import ru.tpgeovk.back.contexts.VkContext;
 import ru.tpgeovk.back.exception.VkException;
@@ -72,34 +73,50 @@ public class AuthController {
     }
 
     @RequestMapping(path = "/auth/login", method = RequestMethod.POST)
-    public ResponseEntity login(@RequestBody TokenRequest request) {
-        Integer userId;
-        String token = request.getToken();
-        if (StringUtils.isEmpty(token)) {
-            return ResponseEntity.badRequest().body(new ErrorResponse("Error: Empty token"));
-        }
-        try {
-            userId = resolveUser(token);
-            if (userId.equals(0)) {
-                return ResponseEntity.badRequest().body(new ErrorResponse("Unable to resolve user"));
+    public DeferredResult<ResponseEntity> login(@RequestBody TokenRequest request) {
+        DeferredResult<ResponseEntity> defResult = new DeferredResult<>();
+
+        new Thread(() -> {
+            Integer userId;
+            String token = request.getToken();
+            if (StringUtils.isEmpty(token)) {
+                defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse("Error: Empty token")));
+                return;
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
-        }
+            try {
+                userId = resolveUser(token);
+                if (userId.equals(0)) {
+                    defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse("Unable to resolve user")));
+                    return;
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage())));
+                return;
+            }
 
-        tokenService.put(token, userId);
+            tokenService.put(token, userId);
 
-        return ResponseEntity.ok(null);
+            defResult.setResult(ResponseEntity.ok(null));
+        }).start();
+
+        return defResult;
     }
 
     @RequestMapping(path = "/auth/logout", method = RequestMethod.POST)
-    public ResponseEntity logout(@RequestBody TokenRequest request) {
-        if (StringUtils.isEmpty(request.getToken())) {
-            return ResponseEntity.badRequest().body(new ErrorResponse("Error: Empty token"));
-        }
-        tokenService.remove(request.getToken());
-        return ResponseEntity.ok(null);
+    public DeferredResult<ResponseEntity> logout(@RequestBody TokenRequest request) {
+        DeferredResult<ResponseEntity> defResult = new DeferredResult<>();
+
+        new Thread(() -> {
+            if (StringUtils.isEmpty(request.getToken())) {
+                defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse("Error: Empty token")));
+                return;
+            }
+            tokenService.remove(request.getToken());
+            defResult.setResult(ResponseEntity.ok(null));
+        }).start();
+
+        return defResult;
     }
 
 

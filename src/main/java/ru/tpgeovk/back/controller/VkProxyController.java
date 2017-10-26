@@ -4,6 +4,7 @@ import com.vk.api.sdk.client.actors.UserActor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.async.DeferredResult;
 import ru.tpgeovk.back.exception.VkException;
 import ru.tpgeovk.back.model.CheckinInfo;
 import ru.tpgeovk.back.model.UserInfo;
@@ -29,83 +30,105 @@ public class VkProxyController {
     }
 
     @RequestMapping(path = "/vkapi/user", method = RequestMethod.GET)
-    public ResponseEntity getUser(@RequestParam(value = "token") String token) {
+    public DeferredResult<ResponseEntity> getUser(@RequestParam(value = "token") String token) {
+        DeferredResult<ResponseEntity> defResult = new DeferredResult<>();
 
-        UserActor actor = tokenService.getUser(token);
-        if (actor == null) {
-            return ResponseEntity.badRequest().body(new ErrorResponse("Unknown token received"));
-        }
+        new Thread(() -> {
+            UserActor actor = tokenService.getUser(token);
+            if (actor == null) {
+                defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse("Unknown token received")));
+                return;
+            }
 
-        UserInfo result;
-        try {
-            result = vkService.getUser(actor);
-        } catch (VkException e) {
-            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
-        }
+            UserInfo result;
+            try {
+                result = vkService.getUser(actor);
+                defResult.setResult(ResponseEntity.ok(result));
+            } catch (VkException e) {
+                defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage())));
+            }
+        }).start();
 
-        return ResponseEntity.ok(result);
+        return defResult;
     }
 
     @RequestMapping(path = "/vkapi/checkins/all", method = RequestMethod.GET)
-    public ResponseEntity getAllCheckins(@RequestParam(value = "token") String token) {
+    public DeferredResult<ResponseEntity> getAllCheckins(@RequestParam(value = "token") String token) {
+        DeferredResult<ResponseEntity> defResult = new DeferredResult<>();
 
-        UserActor actor = tokenService.getUser(token);
-        if (actor == null) {
-            return ResponseEntity.badRequest().body(new ErrorResponse("Unknown token received"));
-        }
+        new Thread(() -> {
+            UserActor actor = tokenService.getUser(token);
+            if (actor == null) {
+                defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse("Unknown token received")));
+                return;
+            }
 
-        List<CheckinInfo> result;
-        try {
-            result = vkService.getAllUserCheck(actor);
-        } catch (VkException e) {
-            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
-        }
+            List<CheckinInfo> result;
+            try {
+                result = vkService.getAllUserCheck(actor);
+                defResult.setResult(ResponseEntity.ok(result));
+            } catch (VkException e) {
+                defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage())));
+            }
+        }).start();
 
-        return ResponseEntity.ok(result);
+        return defResult;
     }
 
     @RequestMapping(path = "/vkapi/checkins/latest", method = RequestMethod.GET)
-    public ResponseEntity getLatestCheckins(@RequestParam(value = "token") String token,
+    public DeferredResult<ResponseEntity> getLatestCheckins(@RequestParam(value = "token") String token,
                                             @RequestParam(value = "latitude") String lat,
                                             @RequestParam(value = "longitude") String lon) {
+        DeferredResult<ResponseEntity> defResult = new DeferredResult<>();
 
-        Float latitude;
-        Float longitude;
-        try {
-            latitude = Float.parseFloat(lat);
-            longitude = Float.parseFloat(lon);
-        } catch (NumberFormatException e) {
-            return ResponseEntity.badRequest().body(new ErrorResponse("Wrong coordinates values!"));
-        }
+        new Thread(() -> {
+            Float latitude;
+            Float longitude;
+            try {
+                latitude = Float.parseFloat(lat);
+                longitude = Float.parseFloat(lon);
+            } catch (NumberFormatException e) {
+                defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse("Wrong coordinates values!")));
+                return;
+            }
 
-        UserActor actor = tokenService.getUser(token);
-        if (actor == null) {
-            return ResponseEntity.badRequest().body(new ErrorResponse("Unknown token received"));
-        }
+            UserActor actor = tokenService.getUser(token);
+            if (actor == null) {
+                defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse("Unknown token received")));
+                return;
+            }
 
-        List<CheckinInfo> result;
-        try {
-            result = vkService.getLatestCheckins(actor, latitude, longitude);
-        } catch (VkException e) {
-            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
-        }
+            List<CheckinInfo> result;
+            try {
+                result = vkService.getLatestCheckins(actor, latitude, longitude);
+                defResult.setResult(ResponseEntity.ok(result));
+            } catch (VkException e) {
+                defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage())));
+            }
+        }).start();
 
-        return ResponseEntity.ok(result);
+        return defResult;
     }
 
     @RequestMapping(path = "/vkapi/post/create", method = RequestMethod.POST)
-    public ResponseEntity createPost(@RequestBody CreatePostRequest request) {
+    public DeferredResult<ResponseEntity> createPost(@RequestBody CreatePostRequest request) {
+        DeferredResult<ResponseEntity> defResult = new DeferredResult<>();
 
-        UserActor actor = tokenService.getUser(request.getToken());
-        if (actor == null) {
-            return ResponseEntity.badRequest().body(new ErrorResponse("Unknown token received"));
-        }
+        new Thread(() -> {
+            UserActor actor = tokenService.getUser(request.getToken());
+            if (actor == null) {
+                defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse("Unknown token received")));
+                return;
+            }
 
-        try {
-            CheckinInfo result = vkService.createPost(actor, request.getPlaceId(), request.getText());
-            return ResponseEntity.ok(result);
-        } catch (VkException e) {
-            return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
-        }
+            try {
+                CheckinInfo result = vkService.createPost(actor, request.getPlaceId(), request.getText());
+                defResult.setResult(ResponseEntity.ok(result));
+            } catch (VkException e) {
+                defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage())));
+            }
+        }).start();
+
+        return defResult;
     }
 }
