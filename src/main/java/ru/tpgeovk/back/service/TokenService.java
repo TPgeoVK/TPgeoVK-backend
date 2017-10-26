@@ -5,11 +5,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class TokenService  {
 
-    private HashMap<String, Integer> tokenToUser = new HashMap<>();
+    private Map<String, Integer> tokenToUser = new ConcurrentHashMap<>();
 
     public void put(String token, Integer userId) {
         tokenToUser.put(token, userId);
