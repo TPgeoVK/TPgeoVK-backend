@@ -8,6 +8,9 @@ import com.vk.api.sdk.exceptions.ApiException;
 import com.vk.api.sdk.exceptions.ClientException;
 import com.vk.api.sdk.httpclient.HttpTransportClient;
 import com.vk.api.sdk.objects.UserAuthResponse;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.json.GsonBuilderUtils;
@@ -52,14 +55,14 @@ public class AuthController {
 
     private final VkApiClient vk = VkContext.getVkApiClient();
 
-    private final HttpTransportClient httpTransportClient;
+    private final OkHttpClient httpClient;
     private final Gson gson;
 
 
     @Autowired
     public AuthController(TokenService tokenService) {
         this.tokenService = tokenService;
-        httpTransportClient = new HttpTransportClient();
+        this.httpClient = new OkHttpClient();
         gson = new GsonBuilder().create();
     }
 
@@ -77,6 +80,9 @@ public class AuthController {
         }
         try {
             userId = resolveUser(token);
+            if (userId.equals(0)) {
+                return ResponseEntity.badRequest().body(new ErrorResponse("Unable to resolve user"));
+            }
         } catch (IOException e) {
             e.printStackTrace();
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
@@ -97,15 +103,26 @@ public class AuthController {
     }
 
 
-    private Integer resolveUser(String token) throws IOException {
+    private int resolveUser(String token) throws IOException {
         String url = "https://api.vk.com/method/users.get?access_token=" + token + "&v=" + VkContext.getApiVersion();
-        String response = httpTransportClient.get(url).getContent();
+        String response = "";
+        boolean ok = false;
+        while (!ok) {
+            Request request = new Request.Builder().url(url).get().build();
+            Response clientResponse = httpClient.newCall(request).execute();
+            response = clientResponse.body().string();
+            if (!response.contains("many")) {
+                ok = true;
+            }
+        }
         JsonParser parser = new JsonParser();
         JsonObject jsonObject = parser.parse(response).getAsJsonObject();
         if ((jsonObject.getAsJsonArray("response") == null) ||
                 (jsonObject.getAsJsonArray("response").size() == 0)) {
-            return null;
+            throw new IOException(response);
+
         }
+        
         return jsonObject.getAsJsonArray("response").get(0)
                 .getAsJsonObject().getAsJsonPrimitive("id").getAsInt();
     }
