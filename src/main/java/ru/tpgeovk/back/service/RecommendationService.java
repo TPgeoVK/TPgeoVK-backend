@@ -352,9 +352,9 @@ public class RecommendationService {
         boolean ok = false;
         while (!ok) {
             try {
-                nearestPlaces = vk.places().search(actor, latitude, longitude).q("*").radius(1).count(20).execute().getItems();
+                nearestPlaces = vk.places().search(actor, latitude, longitude).q("*").radius(1).count(3).execute().getItems();
                 if (nearestPlaces.size() == 0) {
-                    nearestPlaces = vk.places().search(actor, latitude, longitude).q("*").radius(2).count(20).execute().getItems();
+                    nearestPlaces = vk.places().search(actor, latitude, longitude).q("*").radius(2).count(3).execute().getItems();
                 }
                 ok = true;
             } catch (ApiException | ClientException e) {
@@ -384,10 +384,11 @@ public class RecommendationService {
             respLoop: while (!ok) {
                 try {
                     response = vk.execute().code(actor, scrtipt).execute();
+                    ok = true;
                 } catch (ApiException | ClientException e) {
                     if (e instanceof ApiTooManyException) {
                         try {
-                            Thread.currentThread().sleep(50);
+                            Thread.currentThread().sleep(100);
                             continue respLoop;
                         } catch (InterruptedException e1) {
                             Thread.currentThread().interrupt();
@@ -412,7 +413,6 @@ public class RecommendationService {
         }
 
         return placeRatings.entrySet().stream()
-                .filter(a -> !a.getValue().equals(0))
                 .sorted(Comparator.comparingInt(Map.Entry::getValue))
                 .map(a -> FullPlaceInfo.fromPlaceFull(a.getKey(), a.getValue()))
                 .collect(Collectors.toList());
