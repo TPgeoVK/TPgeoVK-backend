@@ -12,6 +12,7 @@ public class GroupInfo {
     private Integer friendsCount;
     private Integer placeId;
     private String placeTitle;
+    private String groupPhoto;
     private Float longitude;
     private Float latitude;
 
@@ -19,6 +20,7 @@ public class GroupInfo {
         GroupInfo res = new GroupInfo();
         res.setId(group.getId());
         res.setName(group.getName());
+        res.setGroupPhoto(group.getPhoto200());
         return res;
     }
 
@@ -28,6 +30,7 @@ public class GroupInfo {
         res.setName(groupFull.getName());
         res.setDescription(groupFull.getDescription());
         res.setMembersCount(groupFull.getMembersCount());
+        res.setGroupPhoto(groupFull.getPhoto200());
         if (groupFull.getPlace() != null) {
             res.setPlaceId(groupFull.getPlace().getId());
             res.setLongitude(groupFull.getPlace().getLongitude());
@@ -84,6 +87,10 @@ public class GroupInfo {
     public String getPlaceTitle() { return placeTitle; }
 
     public void setPlaceTitle(String placeTitle) { this.placeTitle = placeTitle; }
+
+    public String getGroupPhoto() { return groupPhoto; }
+
+    public void setGroupPhoto(String groupPhoto) { this.groupPhoto = groupPhoto; }
 
     public Float getLongitude() { return longitude; }
 
