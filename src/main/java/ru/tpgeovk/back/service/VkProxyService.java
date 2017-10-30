@@ -126,7 +126,7 @@ public class VkProxyService {
         StringBuilder scriptBuilder = new StringBuilder();
         scriptBuilder.append(
                 "var checkins = API.places.getCheckins({\"latitude\":" + latitude.toString() + ",\"longitude\": "
-                        + longitude.toString() + ",\"timestamp\":" + String.valueOf(offsetTime) + "});\n")
+                        + longitude.toString() + "});\n")
                 .append("if (checkins.count == 0) { return [[],[]]; }\n")
                 .append("var posts = API.wall.getById({\"posts\":checkins.items@.id});\n")
                 .append("var users = API.users.get({\"user_ids\":posts@.from_id,\"fields\":\"photo_200,schools,career,universities\"});")
