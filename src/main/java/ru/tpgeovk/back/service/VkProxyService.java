@@ -23,6 +23,7 @@ import ru.tpgeovk.back.model.CheckinInfo;
 import ru.tpgeovk.back.model.UserInfo;
 import ru.tpgeovk.back.model.vk.VkWallpost;
 import ru.tpgeovk.back.model.vk.VkWallpostFull;
+import ru.tpgeovk.back.scripts.VkScripts;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -32,12 +33,6 @@ import java.util.stream.Collectors;
 
 @Service
 public class VkProxyService {
-
-    private static final String CREATE_CHECKIN = "var userId = %d;\nvar placeId = %d;\n" +
-            "return API.places.checkin({\"place_id\": placeId});";
-    private static final String CREATE_CHECKIN_TEXT = "var userId = %d;\nvar placeId = %d;\nvar text = \"%s\";\n" +
-            "return API.places.checkin({\"place_id\": placeId, \"text\": text});";
-
 
     private static final long QUARTER_OFFSET = 300; //5 min.
 
@@ -177,8 +172,8 @@ public class VkProxyService {
 
     public CheckinInfo createPost(UserActor actor, Integer placeId, String text) throws VkException {
         JsonElement response = null;
-        String script = StringUtils.isEmpty(text) ? String.format(CREATE_CHECKIN, actor.getId(), placeId) :
-                String.format(CREATE_CHECKIN_TEXT, actor.getId(), placeId, text);
+        String script = StringUtils.isEmpty(text) ? String.format(VkScripts.CREATE_CHECKIN, actor.getId(), placeId) :
+                String.format(VkScripts.CREATE_CHECKIN_TEXT, actor.getId(), placeId, text);
 
         boolean ok = false;
         while (!ok) {

@@ -26,62 +26,16 @@ import ru.tpgeovk.back.contexts.VkContext;
 import ru.tpgeovk.back.exception.GoogleException;
 import ru.tpgeovk.back.exception.VkException;
 import ru.tpgeovk.back.model.*;
+import ru.tpgeovk.back.scripts.VkScripts;
 import ru.tpgeovk.back.text.TextProcessor;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static ru.tpgeovk.back.scripts.VkScripts.PLACE_CHECKINS_USERS;
+
 @Service
 public class RecommendationService {
-
-    private static final String SCRIPT_EVENTS = "var events = API.groups.search({\"q\":\"*\",\"cityId\":%d,\"count\":25,\"type\":\"event\",\"future\":true,});\n" +
-            "var eventIds = events.items@.id;\nreturn API.groups.getById({\"group_ids\":eventIds,\"fields\":\"description,members_count,place\"});\n";
-
-    private static final String PLACE_CHECKINS_USERS = "var placeId = %d;\n" +
-            "var checkins = API.places.getCheckins({\"place\":placeId});\n" +
-            "var users = checkins.items@.user_id;\n" +
-            "var total = checkins.count;\n" +
-            "if (total <= 20) { return users; }\n" +
-            "var offset = 20;\n" +
-            "while ((offset < (total-20)) && (offset <= 400)) {\n" +
-            "offset = offset + 20;\n" +
-            "users = users + API.places.getCheckins({\"place\":placeId,\"offset\":offset}).items@.user_id;\n" +
-            "}\n" +
-            "return users;";
-
-    private static final String COORD_CHECKINS_USERS = "var lat = %f;\nvar lon = %f;\n" +
-            "var checkins = API.places.getCheckins({\"latitude\":lat,\"longitude\":lon});\n" +
-            "var users = checkins.items@.user_id;\n" +
-            "var total = checkins.count;\n" +
-            "if (total <= 20) { return users; }\n" +
-            "var offset = 20;\n" +
-            "while ((offset < (total-20)) && (offset <= 400)) {\n" +
-            "offset = offset + 20;\n" +
-            "users = users + API.places.getCheckins({\"latitude\":lat,\"longitude\":lon,\"offset\":offset}).items@.user_id;\n" +
-            "}\n" +
-            "return users;";
-
-    private static final String GROUP_MEMBERS = "var userId = %d;\nvar groupsOffset = %d;\nvar users = %s;\n" +
-            "var groups = API.groups.get({\"user_id\":userId,\"offset\":groupsOffset,\"count\":24}).items;\n" +
-            "if (groups.length == 0) { return []; }\n" +
-            "var i = 0;\n" +
-            "var res = [];\n" +
-            "var group;\n" +
-            "while (i < groups.length) {\n" +
-            "group = groups[i];\n" +
-            "res = res + [{\"groupId\": group,\"members\": API.groups.isMember({\"group_id\": group,\"user_ids\": users})}];\n" +
-            "i = i + 1;\n" +
-            "}\nreturn res;";
-
-    private static final String GROUPS_SEARCH = "var group = \"%s\";\n" +
-            "var groupIds = [];\n" +
-            "var found = API.groups.search({\"q\":group,\"future\":true});\n" +
-            "if (found.count == 0) { return []; }\n" +
-            "groupIds = groupIds + [found.items[0].id];\n" +
-            "if (found.count > 1) { groupIds = groupIds + [found.items[1].id]; }\n" +
-            "if (found.count > 2) { groupIds = groupIds + [found.items[2].id]; }\n" +
-            "var groupsFull = API.groups.getById({\"group_ids\": groupIds, \"fields\":\"description,members_count,place\"});\n" +
-            "return groupsFull;";
 
     private final VkApiClient vk;
 
@@ -98,51 +52,6 @@ public class RecommendationService {
         this.vkProxyService = vkProxyService;
     }
 
-    public List<GroupInfo> recommendEventByFriends(Float latitude, Float longitude, UserActor actor)
-            throws GoogleException, VkException {
-
-        List<GroupInfo> events = getEventsInCity(latitude, longitude, actor);
-        if (events.isEmpty()) {
-            return events;
-        }
-
-        String script = "var result = [];\n";
-        for (GroupInfo event : events) {
-            script = script + "result = result + [API.groups.getMembers({\"group_id\":\"" + event.getId() + "\"," +
-                    "\"filter\":\"friends\"}).items.length];\n";
-        }
-        script = script + "return result;";
-        JsonElement response = null;
-        boolean ok = false;
-        while (!ok) {
-            try {
-                response = vk.execute().code(actor, script).execute();
-                ok = true;
-            } catch (ApiException | ClientException e) {
-                if (e instanceof ApiTooManyException) {
-                    try {
-                        Thread.currentThread().sleep(50);
-                        continue;
-                    } catch (InterruptedException e1) {
-                        Thread.currentThread().interrupt();
-                    }
-                } else {
-                    e.printStackTrace();
-                    throw new VkException(e.getMessage(), e);
-                }
-            }
-        }
-
-        Integer[] friendCounts = gson.fromJson(response, Integer[].class);
-        int i = 0;
-        for (GroupInfo event : events) {
-            event.setFriendsCount(friendCounts[i]);
-            i++;
-        }
-
-        return events.stream().filter(a -> !a.getFriendsCount().equals(0)).collect(Collectors.toList());
-    }
-
     public List<Integer> getUsersFromCheckins(UserActor actor, List<CheckinInfo> userCheckins) throws VkException {
         if ((userCheckins == null) || (userCheckins.isEmpty())) {
             userCheckins = vkProxyService.getAllUserCheck(actor);
@@ -157,7 +66,7 @@ public class RecommendationService {
                 while (!ok) {
                     try {
                         /** Locale.US для точки вместо запятой при подстановке Float */
-                        script = String.format(Locale.US, PLACE_CHECKINS_USERS, checkin.getPlace().getId());
+                        script = String.format(Locale.US, VkScripts.PLACE_CHECKINS_USERS, checkin.getPlace().getId());
                         response = vk.execute().code(actor, script).execute();
                         ok = true;
                     } catch (ApiException | ClientException e) {
@@ -182,7 +91,7 @@ public class RecommendationService {
                 ok = false;
                 while (!ok) {
                     try {
-                        script = String.format(Locale.US, COORD_CHECKINS_USERS, checkin.getPlace().getLatitude(),
+                        script = String.format(Locale.US, VkScripts.COORD_CHECKINS_USERS, checkin.getPlace().getLatitude(),
                                 checkin.getPlace().getLongitude());
                         response = vk.execute().code(actor, script).execute();
                         ok = true;
@@ -234,7 +143,7 @@ public class RecommendationService {
             String script;
             while (groupsOffset < 200) {
                 try {
-                    script = String.format(GROUP_MEMBERS, actor.getId(), groupsOffset, currentIds.toString());
+                    script = String.format(VkScripts.GROUP_MEMBERS, actor.getId(), groupsOffset, currentIds.toString());
                     response = vk.execute().code(actor, script).execute();
                 } catch (ApiException | ClientException e) {
                     if (e instanceof ApiTooManyException) {
@@ -470,7 +379,7 @@ public class RecommendationService {
                 continue loop1;
             }
 
-            script = String.format(GROUPS_SEARCH, title);
+            script = String.format(VkScripts.GROUPS_SEARCH, title);
             boolean ok = false;
             loop2: while (!ok) {
                 try {
@@ -513,7 +422,7 @@ public class RecommendationService {
             return new ArrayList<>();
         }
 
-        String script = String.format(SCRIPT_EVENTS, cityId);
+        String script = String.format(VkScripts.SCRIPT_EVENTS, cityId);
         JsonElement response;
         try {
             response = vk.execute().code(actor, script).execute();

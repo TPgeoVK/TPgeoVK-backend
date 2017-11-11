@@ -1,0 +1,58 @@
+package ru.tpgeovk.back.scripts;
+
+public class VkScripts {
+
+    public static final String SCRIPT_EVENTS = "var events = API.groups.search({\"q\":\"*\",\"cityId\":%d,\"count\":25,\"type\":\"event\",\"future\":true,});\n" +
+            "var eventIds = events.items@.id;\nreturn API.groups.getById({\"group_ids\":eventIds,\"fields\":\"description,members_count,place\"});\n";
+
+    public static final String PLACE_CHECKINS_USERS = "var placeId = %d;\n" +
+            "var checkins = API.places.getCheckins({\"place\":placeId});\n" +
+            "var users = checkins.items@.user_id;\n" +
+            "var total = checkins.count;\n" +
+            "if (total <= 20) { return users; }\n" +
+            "var offset = 20;\n" +
+            "while ((offset < (total-20)) && (offset <= 400)) {\n" +
+            "offset = offset + 20;\n" +
+            "users = users + API.places.getCheckins({\"place\":placeId,\"offset\":offset}).items@.user_id;\n" +
+            "}\n" +
+            "return users;";
+
+    public static final String COORD_CHECKINS_USERS = "var lat = %f;\nvar lon = %f;\n" +
+            "var checkins = API.places.getCheckins({\"latitude\":lat,\"longitude\":lon});\n" +
+            "var users = checkins.items@.user_id;\n" +
+            "var total = checkins.count;\n" +
+            "if (total <= 20) { return users; }\n" +
+            "var offset = 20;\n" +
+            "while ((offset < (total-20)) && (offset <= 400)) {\n" +
+            "offset = offset + 20;\n" +
+            "users = users + API.places.getCheckins({\"latitude\":lat,\"longitude\":lon,\"offset\":offset}).items@.user_id;\n" +
+            "}\n" +
+            "return users;";
+
+    public static final String GROUP_MEMBERS = "var userId = %d;\nvar groupsOffset = %d;\nvar users = %s;\n" +
+            "var groups = API.groups.get({\"user_id\":userId,\"offset\":groupsOffset,\"count\":24}).items;\n" +
+            "if (groups.length == 0) { return []; }\n" +
+            "var i = 0;\n" +
+            "var res = [];\n" +
+            "var group;\n" +
+            "while (i < groups.length) {\n" +
+            "group = groups[i];\n" +
+            "res = res + [{\"groupId\": group,\"members\": API.groups.isMember({\"group_id\": group,\"user_ids\": users})}];\n" +
+            "i = i + 1;\n" +
+            "}\nreturn res;";
+
+    public static final String GROUPS_SEARCH = "var group = \"%s\";\n" +
+            "var groupIds = [];\n" +
+            "var found = API.groups.search({\"q\":group,\"future\":true});\n" +
+            "if (found.count == 0) { return []; }\n" +
+            "groupIds = groupIds + [found.items[0].id];\n" +
+            "if (found.count > 1) { groupIds = groupIds + [found.items[1].id]; }\n" +
+            "if (found.count > 2) { groupIds = groupIds + [found.items[2].id]; }\n" +
+            "var groupsFull = API.groups.getById({\"group_ids\": groupIds, \"fields\":\"description,members_count,place\"});\n" +
+            "return groupsFull;";
+
+    public static final String CREATE_CHECKIN = "var userId = %d;\nvar placeId = %d;\n" +
+            "return API.places.checkin({\"place_id\": placeId});";
+    public static final String CREATE_CHECKIN_TEXT = "var userId = %d;\nvar placeId = %d;\nvar text = \"%s\";\n" +
+            "return API.places.checkin({\"place_id\": placeId, \"text\": text});";
+}
