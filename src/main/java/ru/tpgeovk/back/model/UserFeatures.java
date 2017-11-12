@@ -7,7 +7,7 @@ public class UserFeatures {
 
     private Integer userId;
     private Integer age;
-    private String gender;
+    private Boolean gender; // 0 - male, 1 - female
     private String religion;
     private List<String> groups = new ArrayList<>();
 
@@ -21,9 +21,9 @@ public class UserFeatures {
 
     public void setAge(Integer age) { this.age = age; }
 
-    public String getGender() { return gender; }
+    public Boolean getGender() { return gender; }
 
-    public void setGender(String gender) { this.gender = gender; }
+    public void setGender(Boolean gender) { this.gender = gender; }
 
     public String getReligion() { return religion; }
 

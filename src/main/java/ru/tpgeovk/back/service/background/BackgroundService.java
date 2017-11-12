@@ -55,7 +55,7 @@ public class BackgroundService {
                 usersDataService.createForUser(token);
 
                 try {
-                    List<CheckinInfo> userCheckins = vkProxyService.getAllUserCheck(actor);
+                    List<CheckinInfo> userCheckins = vkProxyService.getAllUserCheckins(actor);
                     usersDataService.getCheckins(token).clear();
                     usersDataService.getCheckins(token).addAll(userCheckins);
 

@@ -59,7 +59,7 @@ public class VkProxyService {
         return UserInfo.fromXtrCounters(usersResponse.get(0));
     }
 
-    public List<CheckinInfo> getAllUserCheck(UserActor actor) throws VkException {
+    public List<CheckinInfo> getAllUserCheckins(UserActor actor) throws VkException {
         /** TODO: replace with private static final String */
         StringBuilder scriptBuilder = new StringBuilder();
         scriptBuilder.append(

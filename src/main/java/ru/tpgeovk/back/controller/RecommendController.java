@@ -8,16 +8,13 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.async.DeferredResult;
-import ru.tpgeovk.back.exception.GoogleException;
 import ru.tpgeovk.back.exception.VkException;
 import ru.tpgeovk.back.model.*;
 import ru.tpgeovk.back.model.response.ErrorResponse;
 import ru.tpgeovk.back.service.RecommendationService;
 import ru.tpgeovk.back.service.TokenService;
-import ru.tpgeovk.back.service.UsersDataService;
 import ru.tpgeovk.back.service.VkProxyService;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -71,7 +68,7 @@ public class RecommendController {
             }
 
             try {
-                List<CheckinInfo> userCheckins = vkProxyService.getAllUserCheck(actor);
+                List<CheckinInfo> userCheckins = vkProxyService.getAllUserCheckins(actor);
                 List<Integer> users = recommendationService.getUsersFromCheckins(actor, userCheckins);
                 Map<Integer, List<Integer>> usersGroups = recommendationService.getSimilarUsers(actor, users);
                 List<UserInfo> friends = recommendationService.getSimilarUsersInfo(actor, usersGroups);
@@ -97,7 +94,7 @@ public class RecommendController {
             }
 
             try {
-                List<CheckinInfo> userCheckins = vkProxyService.getAllUserCheck(actor);
+                List<CheckinInfo> userCheckins = vkProxyService.getAllUserCheckins(actor);
                 List<GroupInfo> groups = recommendationService.recommendGroupsByCheckins(actor, userCheckins);
                 defResult.setResult(ResponseEntity.ok(groups));
             } catch (VkException e) {

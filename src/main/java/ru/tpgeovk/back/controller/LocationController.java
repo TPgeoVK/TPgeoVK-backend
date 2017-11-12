@@ -8,29 +8,32 @@ import org.springframework.web.context.request.async.DeferredResult;
 import ru.tpgeovk.back.exception.VkException;
 import ru.tpgeovk.back.model.FullPlaceInfo;
 import ru.tpgeovk.back.model.PlaceInfo;
+import ru.tpgeovk.back.model.UserFeatures;
 import ru.tpgeovk.back.model.request.PredictRequest;
 import ru.tpgeovk.back.model.response.ErrorResponse;
 import ru.tpgeovk.back.service.*;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 public class LocationController {
 
     private final TokenService tokenService;
     private final PlaceService placeService;
-    private final RecommendationService recommendationService;
+    private final LocationService locationService;
     private final VkProxyService vkProxyService;
 
     @Autowired
     public LocationController(TokenService tokenService,
                               PlaceService placeDetectionService,
-                              RecommendationService recommendationService,
+                              LocationService locationService,
                               VkProxyService vkProxyService) {
         this.tokenService = tokenService;
         this.placeService = placeDetectionService;
-        this.recommendationService = recommendationService;
+        this.locationService = locationService;
         this.vkProxyService = vkProxyService;
     }
 
@@ -46,11 +49,21 @@ public class LocationController {
             }
 
             try {
+                /**
                 List<FullPlaceInfo> nearestPlaces = recommendationService.recommendNearestPlaces(actor, request.getLatitude(),
                         request.getLongitude());
                 FullPlaceInfo predictedPlace = placeService.detectPlace(actor, nearestPlaces, request.getText());
 
                 defResult.setResult(ResponseEntity.ok(predictedPlace));
+                 */
+
+                List<FullPlaceInfo> nearestPlaces = locationService.getNearestPlaces(actor, request.getLatitude(),
+                        request.getLongitude());
+                Map<Integer, List<UserFeatures>> result = new HashMap<>();
+                for (FullPlaceInfo place : nearestPlaces) {
+                    result.put(place.getId(), locationService.getUsersFromPlace(actor, place.getId()));
+                }
+                defResult.setResult(ResponseEntity.ok(result));
             } catch (VkException e) {
                 e.printStackTrace();
                 defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage())));

@@ -7,23 +7,13 @@ import com.vk.api.sdk.client.actors.UserActor;
 import com.vk.api.sdk.exceptions.ApiException;
 import com.vk.api.sdk.exceptions.ApiTooManyException;
 import com.vk.api.sdk.exceptions.ClientException;
-import com.vk.api.sdk.objects.base.Country;
-import com.vk.api.sdk.objects.database.responses.GetCitiesResponse;
-import com.vk.api.sdk.objects.database.responses.GetCountriesResponse;
-import com.vk.api.sdk.objects.friends.responses.GetResponse;
 import com.vk.api.sdk.objects.groups.GroupFull;
-import com.vk.api.sdk.objects.places.Checkin;
 import com.vk.api.sdk.objects.places.PlaceFull;
-import com.vk.api.sdk.objects.places.responses.GetCheckinsResponse;
 import com.vk.api.sdk.objects.users.UserFull;
-import com.vk.api.sdk.queries.groups.GroupField;
-import com.vk.api.sdk.queries.groups.GroupsGetFilter;
-import com.vk.api.sdk.queries.groups.GroupsGetMembersFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import ru.tpgeovk.back.contexts.VkContext;
-import ru.tpgeovk.back.exception.GoogleException;
 import ru.tpgeovk.back.exception.VkException;
 import ru.tpgeovk.back.model.*;
 import ru.tpgeovk.back.scripts.VkScripts;
@@ -41,20 +31,18 @@ public class RecommendationService {
 
     private final Gson gson;
 
-    private final GeoService geoService;
     private final VkProxyService vkProxyService;
 
     @Autowired
-    public RecommendationService(GeoService geoService, VkProxyService vkProxyService) {
+    public RecommendationService(VkProxyService vkProxyService) {
         vk = VkContext.getVkApiClient();
         gson = new GsonBuilder().create();
-        this.geoService = geoService;
         this.vkProxyService = vkProxyService;
     }
 
     public List<Integer> getUsersFromCheckins(UserActor actor, List<CheckinInfo> userCheckins) throws VkException {
         if ((userCheckins == null) || (userCheckins.isEmpty())) {
-            userCheckins = vkProxyService.getAllUserCheck(actor);
+            userCheckins = vkProxyService.getAllUserCheckins(actor);
         }
         List<Integer> users = new ArrayList<>();
         String script;
@@ -248,13 +236,6 @@ public class RecommendationService {
     }
 
 
-    public List<Integer> recommendGroupsByUsers(UserActor actor, Map<Integer, List<Integer>> usersGroups) {
-        for (Map.Entry<Integer, List<Integer>> userGroups : usersGroups.entrySet()) {
-
-        }
-        return null;
-    }
-
     public List<FullPlaceInfo> recommendNearestPlaces(UserActor actor, Float latitude, Float longitude)
             throws VkException {
         List<PlaceFull> nearestPlaces = null;
@@ -412,33 +393,6 @@ public class RecommendationService {
         result.addAll(groupFullResult.stream().map(a -> GroupInfo.fromGroupFull(a)).collect(Collectors.toList()));
 
         return result;
-    }
-
-    public List<GroupInfo> getEventsInCity(Float latitude, Float longitude, UserActor actor) throws VkException,
-            GoogleException {
-        Integer cityId = geoService.resolveCityId(latitude, longitude, actor);
-        if (cityId == null) {
-            /** TODO: нужно ли сообщать, что не получилось найти город? */
-            return new ArrayList<>();
-        }
-
-        String script = String.format(VkScripts.SCRIPT_EVENTS, cityId);
-        JsonElement response;
-        try {
-            response = vk.execute().code(actor, script).execute();
-        } catch (ApiException | ClientException e) {
-            e.printStackTrace();
-            throw new VkException(e.getMessage(), e);
-        }
-
-        /** TODO: создать десериализатор в GroupInfo */
-        List<GroupFull> groups = gson.fromJson(response, new TypeToken<List<GroupFull>>() {
-        }.getType());
-        if ((groups == null) || (groups.isEmpty())) {
-            return new ArrayList<>();
-        }
-
-        return groups.stream().map(a -> GroupInfo.fromGroupFull(a)).collect(Collectors.toList());
     }
 
     public Double compareGroups(UserActor actor, GroupFull group1, GroupFull group2) throws VkException {

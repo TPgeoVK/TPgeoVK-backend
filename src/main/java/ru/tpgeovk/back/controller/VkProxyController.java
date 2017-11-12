@@ -13,7 +13,6 @@ import ru.tpgeovk.back.model.response.ErrorResponse;
 import ru.tpgeovk.back.service.TokenService;
 import ru.tpgeovk.back.service.VkProxyService;
 
-import java.awt.geom.FlatteningPathIterator;
 import java.util.List;
 
 @RestController
@@ -65,7 +64,7 @@ public class VkProxyController {
 
             List<CheckinInfo> result;
             try {
-                result = vkService.getAllUserCheck(actor);
+                result = vkService.getAllUserCheckins(actor);
                 defResult.setResult(ResponseEntity.ok(result));
             } catch (VkException e) {
                 defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage())));

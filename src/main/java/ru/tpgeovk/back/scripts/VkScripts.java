@@ -55,4 +55,9 @@ public class VkScripts {
             "return API.places.checkin({\"place_id\": placeId});";
     public static final String CREATE_CHECKIN_TEXT = "var userId = %d;\nvar placeId = %d;\nvar text = \"%s\";\n" +
             "return API.places.checkin({\"place_id\": placeId, \"text\": text});";
+
+    public static final String GET_USER_FEATURES = "var userId = %d;\n" +
+            "var groups = API.groups.get({\"user_id\":userId,\"count\":1000});\n" +
+            "var user = API.users.get({\"user_ids\":userId,\"fields\":\"bdate,sex\"})[0];\n" +
+            "return {\"userId\":user.id, \"bdate\":user.bdate, \"gender\":user.sex, \"groups\":groups.items};\n";
 }
