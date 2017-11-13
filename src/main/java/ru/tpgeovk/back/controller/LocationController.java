@@ -49,21 +49,8 @@ public class LocationController {
             }
 
             try {
-                /**
-                List<FullPlaceInfo> nearestPlaces = recommendationService.recommendNearestPlaces(actor, request.getLatitude(),
-                        request.getLongitude());
-                FullPlaceInfo predictedPlace = placeService.detectPlace(actor, nearestPlaces, request.getText());
-
-                defResult.setResult(ResponseEntity.ok(predictedPlace));
-                 */
-
-                List<FullPlaceInfo> nearestPlaces = locationService.getNearestPlaces(actor, request.getLatitude(),
-                        request.getLongitude());
-                Map<Integer, List<UserFeatures>> result = new HashMap<>();
-                for (FullPlaceInfo place : nearestPlaces) {
-                    result.put(place.getId(), locationService.getUsersFromPlace(actor, place.getId()));
-                }
-                defResult.setResult(ResponseEntity.ok(result));
+                FullPlaceInfo place = locationService.detectPlace(actor, request.getLatitude(), request.getLongitude());
+                defResult.setResult(ResponseEntity.ok(place));
             } catch (VkException e) {
                 e.printStackTrace();
                 defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage())));
