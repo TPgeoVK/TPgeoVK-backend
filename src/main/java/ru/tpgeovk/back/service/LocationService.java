@@ -49,6 +49,16 @@ public class LocationService {
 
         UserFeatures actorFeatures = getActorFeatures(actor);
 
+        Integer checkinsMin = places.stream()
+                .mapToInt(FullPlaceInfo::getCheckinsCount)
+                .min()
+                .getAsInt();
+        Integer checkinsMax = places.stream()
+                .mapToInt(FullPlaceInfo::getCheckinsCount)
+                .max()
+                .getAsInt();
+
+
         for (FullPlaceInfo place : places) {
             List<UserFeatures> users = getUsersFromPlace(actor, place.getId());
             /** Встречаются случаи, когда в данном месте есть чекины, но метод getCheckins ничего не возвращает */
@@ -57,34 +67,39 @@ public class LocationService {
             }
             float usersCount = (float)users.size();
 
-            final Boolean actorGender = actorFeatures.getGender();
-            long actorGenderCount = users.stream()
-                    .filter(a -> actorGender.equals(a.getGender()))
-                    .count();
-            Float genderPercent = (float)actorGenderCount / usersCount;
+            Float genderPercent = 0f;
+            if (place.getCheckinsCount() > 30) {
+                final Boolean actorGender = actorFeatures.getGender();
+                long actorGenderCount = users.stream()
+                        .filter(a -> actorGender.equals(a.getGender()))
+                        .count();
+                genderPercent = (float) actorGenderCount / usersCount;
+            }
 
             Float agePercent = 0f;
-            final Integer actorAge = actorFeatures.getAge();
-            if (actorAge != null) {
-                long actorAgeCount = users.stream()
-                        .filter(a -> (a.getAge() != null) && isAgeSimilar(actorAge, a.getAge()))
-                        .count();
-                agePercent = (float)actorAgeCount / usersCount;
+            if (place.getCheckinsCount() > 10) {
+                final Integer actorAge = actorFeatures.getAge();
+                if (actorAge != null) {
+                    long actorAgeCount = users.stream()
+                            .filter(a -> (a.getAge() != null) && isAgeSimilar(actorAge, a.getAge()))
+                            .count();
+                    agePercent = (float) actorAgeCount / usersCount;
+                }
             }
 
-            Float commonGroupsSum = 0f;
+            Float groupsSimilaritySum = 0f;
             for (UserFeatures user : users) {
-                commonGroupsSum  = commonGroupsSum +
+                groupsSimilaritySum  = groupsSimilaritySum +
                         calculateGroupsSimilarity(actorFeatures.getGroups(), user.getGroups());
             }
-            Float groupsPercent = commonGroupsSum / usersCount;
+            Float groupsPercent = groupsSimilaritySum / usersCount;
 
-            /**TODO: изменить функцию нормализации */
-            Float checkinsRating = 1f - (1f / (float)place.getCheckinsCount());
-            Float distanceRating = 1f - ((float)place.getDistance() / 2400f);
+            Float distanceRating = 1f - ((float)place.getDistance() / 2500f);
+
+            Float checkinsRating = (float)(place.getCheckinsCount() - checkinsMin) / (float)(checkinsMax - checkinsMin);
 
             /** TODO: подобрать коэффициенты */
-            Float rating = 0.25f*genderPercent + 0.25f*agePercent + groupsPercent + checkinsRating + distanceRating;
+            Float rating = 0.25f*genderPercent + 0.25f*agePercent + 2f*groupsPercent + 0.5f*checkinsRating + 1.5f*distanceRating;
 
             placeRatings.put(place, rating);
         }
