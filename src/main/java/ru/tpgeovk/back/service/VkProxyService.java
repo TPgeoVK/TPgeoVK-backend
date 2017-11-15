@@ -69,21 +69,21 @@ public class VkProxyService {
         StringBuilder scriptBuilder = new StringBuilder();
         scriptBuilder.append(
                 "var checkins = API.places.getCheckins({\"user_id\":" + actor.getId().toString() + ",\"count\":100});\n")
-        .append("var count = checkins.count;\n")
-        .append("var allCheckins = checkins.items;\n")
-        .append("if (checkins.length == 100) {\n")
-        .append("var offset = 100;\n")
-        .append("checkins = API.places.getCheckins({\"user_id\":" + actor.getId().toString() + ",\"count\":100, " +
-                "\"offset\":offset});\n")
-        .append("while (checkins.length != 0) {\n")
-        .append("allCheckins = allCheckins + checkins.items;\n")
-        .append("offset = offset + 100;\n")
-        .append("checkins = API.places.getCheckins({\"user_id\":" + actor.getId().toString() + ",\"count\":100, " +
-                "\"offset\":offset});\n")
-        .append("}\n}\n")
-        .append("if (allCheckins.length == 0) { return []; }\n")
-        .append("var posts = API.wall.getById({\"posts\":allCheckins@.id});\n")
-        .append("return posts;");
+                .append("var count = checkins.count;\n")
+                .append("var allCheckins = checkins.items;\n")
+                .append("if (checkins.length == 100) {\n")
+                .append("var offset = 100;\n")
+                .append("checkins = API.places.getCheckins({\"user_id\":" + actor.getId().toString() + ",\"count\":100, " +
+                        "\"offset\":offset});\n")
+                .append("while (checkins.length != 0) {\n")
+                .append("allCheckins = allCheckins + checkins.items;\n")
+                .append("offset = offset + 100;\n")
+                .append("checkins = API.places.getCheckins({\"user_id\":" + actor.getId().toString() + ",\"count\":100, " +
+                        "\"offset\":offset});\n")
+                .append("}\n}\n")
+                .append("if (allCheckins.length == 0) { return []; }\n")
+                .append("var posts = API.wall.getById({\"posts\":allCheckins@.id});\n")
+                .append("return posts;");
 
         String script = scriptBuilder.toString();
 
@@ -110,9 +110,9 @@ public class VkProxyService {
 
         List<VkWallpostFull> posts;
         if (response.getAsJsonArray().size() != 0) {
-            posts = gson.fromJson(response, new TypeToken<List<VkWallpostFull>>(){}.getType());
-        }
-        else {
+            posts = gson.fromJson(response, new TypeToken<List<VkWallpostFull>>() {
+            }.getType());
+        } else {
             return new ArrayList<>();
         }
 
@@ -157,9 +157,9 @@ public class VkProxyService {
 
         List<VkWallpostFull> posts;
         if (response.getAsJsonArray().size() != 0) {
-            posts = gson.fromJson(response.getAsJsonArray().get(0), new TypeToken<List<VkWallpostFull>>(){}.getType());
-        }
-        else {
+            posts = gson.fromJson(response.getAsJsonArray().get(0), new TypeToken<List<VkWallpostFull>>() {
+            }.getType());
+        } else {
             return new ArrayList<>();
         }
 
@@ -224,6 +224,37 @@ public class VkProxyService {
         VkWallpostFull post = gson.fromJson(response, VkWallpostFull.class);
 
         return CheckinInfo.fromPostFull(post);
+    }
+
+    public List<UserInfo> getUsers(UserActor actor, List<Integer> userIds) throws VkException {
+        String script = String.format("return API.users.get({\"user_ids\":%s,\"fields\":\"photo_200,schools,career,universities\"});",
+                userIds.toString());
+        JsonElement response = null;
+        boolean ok = false;
+        while (!ok) {
+            try {
+                response = vk.execute().code(actor, script).execute();
+                ok = true;
+            } catch (ApiException | ClientException e) {
+                if (e instanceof ApiTooManyException) {
+                    try {
+                        Thread.currentThread().sleep(50);
+                        continue;
+                    } catch (InterruptedException e1) {
+                        Thread.currentThread().interrupt();
+                    }
+                } else {
+                    e.printStackTrace();
+                    throw new VkException(e.getMessage(), e);
+                }
+            }
+        }
+
+        List<UserFull> users = gson.fromJson(response, new TypeToken<List<UserFull>>() {
+        }.getType());
+        return users.stream()
+                .map(a -> UserInfo.fromUserFull(a))
+                .collect(Collectors.toList());
     }
 }
 

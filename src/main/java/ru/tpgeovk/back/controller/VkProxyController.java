@@ -14,6 +14,7 @@ import ru.tpgeovk.back.service.TokenService;
 import ru.tpgeovk.back.service.VkProxyService;
 
 import java.awt.geom.FlatteningPathIterator;
+import java.util.Arrays;
 import java.util.List;
 
 @RestController
@@ -123,6 +124,29 @@ public class VkProxyController {
 
             try {
                 CheckinInfo result = vkService.createPost(actor, request.getPlaceId(), request.getText());
+                defResult.setResult(ResponseEntity.ok(result));
+            } catch (VkException e) {
+                defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage())));
+            }
+        }).start();
+
+        return defResult;
+    }
+
+    @RequestMapping(path = "/vkapi/users", method = RequestMethod.GET)
+    public DeferredResult<ResponseEntity> getUsers(@RequestParam(value = "token") String token,
+                                                   @RequestParam(value = "ids") Integer[] userIds) {
+        DeferredResult<ResponseEntity> defResult = new DeferredResult<>();
+
+        new Thread(() -> {
+            UserActor actor = tokenService.getUser(token);
+            if (actor == null) {
+                defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse("Unknown token received")));
+                return;
+            }
+
+            try {
+                List<UserInfo> result = vkService.getUsers(actor, Arrays.asList(userIds));
                 defResult.setResult(ResponseEntity.ok(result));
             } catch (VkException e) {
                 defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage())));
