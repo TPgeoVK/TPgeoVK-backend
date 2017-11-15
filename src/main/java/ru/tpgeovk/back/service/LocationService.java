@@ -17,6 +17,7 @@ import ru.tpgeovk.back.exception.VkException;
 import ru.tpgeovk.back.model.FullPlaceInfo;
 import ru.tpgeovk.back.model.UserFeatures;
 import ru.tpgeovk.back.model.deserializer.UserFeaturesDeserializer;
+import ru.tpgeovk.back.model.features.PlaceFeatures;
 import ru.tpgeovk.back.scripts.VkScripts;
 
 import java.util.*;
@@ -49,35 +50,33 @@ public class LocationService {
 
         UserFeatures actorFeatures = getActorFeatures(actor);
 
-        Integer checkinsMin = places.stream()
-                .mapToInt(FullPlaceInfo::getCheckinsCount)
-                .min()
-                .getAsInt();
-        Integer checkinsMax = places.stream()
-                .mapToInt(FullPlaceInfo::getCheckinsCount)
-                .max()
-                .getAsInt();
-
-
+        List<PlaceFeatures> placesFeatures = new ArrayList<>();
         for (FullPlaceInfo place : places) {
             List<UserFeatures> users = getUsersFromPlace(actor, place.getId());
             /** Встречаются случаи, когда в данном месте есть чекины, но метод getCheckins ничего не возвращает */
             if (users.isEmpty()) {
                 continue;
             }
+
+            PlaceFeatures placeFeatures = new PlaceFeatures();
+            placeFeatures.setPlaceId(place.getId());
+            placeFeatures.setCheckinsCount(place.getCheckinsCount());
+            placeFeatures.setDistance(2800 - place.getDistance());
+
             float usersCount = (float)users.size();
 
             Float genderPercent = 0f;
-            if (place.getCheckinsCount() > 30) {
+            if (place.getCheckinsCount() > 300) {
                 final Boolean actorGender = actorFeatures.getGender();
                 long actorGenderCount = users.stream()
                         .filter(a -> actorGender.equals(a.getGender()))
                         .count();
                 genderPercent = (float) actorGenderCount / usersCount;
             }
+            placeFeatures.setSameGenderPercent(genderPercent);
 
             Float agePercent = 0f;
-            if (place.getCheckinsCount() > 10) {
+            if (place.getCheckinsCount() > 300) {
                 final Integer actorAge = actorFeatures.getAge();
                 if (actorAge != null) {
                     long actorAgeCount = users.stream()
@@ -86,22 +85,81 @@ public class LocationService {
                     agePercent = (float) actorAgeCount / usersCount;
                 }
             }
+            placeFeatures.setSameAgePercent(agePercent);
 
             Float groupsSimilaritySum = 0f;
+            Integer similarityCount = 0;
             for (UserFeatures user : users) {
-                groupsSimilaritySum  = groupsSimilaritySum +
-                        calculateGroupsSimilarity(actorFeatures.getGroups(), user.getGroups());
+                Float similarity = calculateGroupsSimilarity(actorFeatures.getGroups(), user.getGroups());
+                if (!similarity.equals(0f)) {
+                    groupsSimilaritySum = groupsSimilaritySum + similarity;
+                    similarityCount = similarityCount + 1;
+                }
             }
-            Float groupsPercent = groupsSimilaritySum / usersCount;
+            if (!groupsSimilaritySum.equals(0f)) {
+                Float groupsPercent = groupsSimilaritySum / (float)similarityCount;
+                placeFeatures.setGroupsSimilarity(groupsPercent);
+            } else {
+                placeFeatures.setGroupsSimilarity(0f);
+            }
 
-            Float distanceRating = 1f - ((float)place.getDistance() / 2500f);
+            placesFeatures.add(placeFeatures);
+        }
 
-            Float checkinsRating = (float)(place.getCheckinsCount() - checkinsMin) / (float)(checkinsMax - checkinsMin);
 
-            /** TODO: подобрать коэффициенты */
-            Float rating = 0.25f*genderPercent + 0.25f*agePercent + 2f*groupsPercent + 0.5f*checkinsRating + 1.5f*distanceRating;
+        Integer checkinsMin = places.stream()
+                .mapToInt(FullPlaceInfo::getCheckinsCount)
+                .min()
+                .getAsInt();
+        Integer checkinsMax = places.stream()
+                .mapToInt(FullPlaceInfo::getCheckinsCount)
+                .max()
+                .getAsInt();
+        if (checkinsMax.equals(0)) {
+            checkinsMax = 1;
+        }
 
-            placeRatings.put(place, rating);
+        Float similarityMin = (float)placesFeatures.stream()
+                .mapToDouble(PlaceFeatures::getGroupsSimilarity)
+                .min()
+                .getAsDouble();
+        Float similarityMax = (float)placesFeatures.stream()
+                .mapToDouble(PlaceFeatures::getGroupsSimilarity)
+                .max()
+                .getAsDouble();
+        if (similarityMax.equals(0f)) {
+            similarityMax = 1f;
+        }
+
+        Integer distanceMin = placesFeatures.stream()
+                .mapToInt(PlaceFeatures::getDistance)
+                .min()
+                .getAsInt();
+        Integer distanceMax = placesFeatures.stream()
+                .mapToInt(PlaceFeatures::getDistance)
+                .max()
+                .getAsInt();
+        if (distanceMax.equals(distanceMin)) {
+            distanceMin = 0;
+        }
+
+        for (PlaceFeatures placeFeatures : placesFeatures) {
+            Float checkinsRating = (float)(placeFeatures.getCheckinsCount() - checkinsMin) /
+                    (float)(checkinsMax - checkinsMin);
+            Float similarityRating = (placeFeatures.getGroupsSimilarity() - similarityMin) /
+                    (similarityMax - similarityMin);
+            Float distanceRating = (float)(placeFeatures.getDistance() - distanceMin) /
+                    (float)(distanceMax - distanceMin);
+            Float ageRating = placeFeatures.getSameAgePercent();
+            Float genderRating = placeFeatures.getSameGenderPercent();
+
+            Float placeRating = checkinsRating + 1.2f*similarityRating + 1.7f*distanceRating + 0.25f*ageRating + 0.25f*genderRating;
+
+            FullPlaceInfo placeInfo = places.stream()
+                    .filter(a -> a.getId().equals(placeFeatures.getPlaceId()))
+                    .findFirst()
+                    .get();
+            placeRatings.put(placeInfo, placeRating);
         }
 
         return placeRatings.entrySet().stream()
