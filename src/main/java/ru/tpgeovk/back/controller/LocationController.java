@@ -46,13 +46,6 @@ public class LocationController {
             }
 
             try {
-                if ("starbuks".equalsIgnoreCase(request.getText())) {
-                    PlaceInfo placeInfo = new PlaceInfo();
-                    placeInfo.setTitle("Starbuks");
-                    placeInfo.setLatitude(request.getLatitude());
-                    placeInfo.setLongitude(request.getLongitude());
-                    defResult.setResult(ResponseEntity.ok(placeInfo));
-                }
                 List<FullPlaceInfo> nearestPlaces = recommendationService.recommendNearestPlaces(actor, request.getLatitude(),
                         request.getLongitude());
                 FullPlaceInfo predictedPlace = placeService.detectPlace(actor, nearestPlaces, request.getText());
