@@ -235,9 +235,20 @@ public class LocationService {
         }
         List<Integer> userIds = gson.fromJson(response, new TypeToken<List<Integer>>(){}.getType());
 
+        int start = 0;
+        int end = 12;
         List<UserFeatures> result = new ArrayList<>();
-        for (Integer userId : userIds) {
-            script = String.format(VkScripts.GET_USER_FEATURES, userId);
+
+        while (start < userIds.size()) {
+            if (end > userIds.size()) {
+                end = userIds.size();
+            }
+
+            List<Integer> currentIds = userIds.subList(start, end);
+            start = start + 12;
+            end = end + 12;
+
+            script = String.format(VkScripts.GET_USERS_FEATURES, currentIds.toString());
             ok = false;
             while (!ok) {
                 try {
@@ -257,8 +268,8 @@ public class LocationService {
                 }
             }
 
-            UserFeatures user = gson.fromJson(response, UserFeatures.class);
-            result.add(user);
+            List<UserFeatures> users = gson.fromJson(response, new TypeToken<List<UserFeatures>>(){}.getType());
+            result.addAll(users);
         }
 
         return result;
