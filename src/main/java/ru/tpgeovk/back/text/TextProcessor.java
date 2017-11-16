@@ -67,15 +67,26 @@ public class TextProcessor {
         return commonWords/totalWords;
     }
 
+    public static Float compareTextsSimple(String title, String post) {
+        if (StringUtils.isEmpty(title) || StringUtils.isEmpty(title)) {
+            return 0f;
+        }
+
+        int containing = fuzzyContainRating(title, post);
+
+        return (float)containing;
+    }
+
     public static int fuzzyContainRating(String needle, String text) {
         needle = filterText(needle);
         text = filterText(text);
 
         String[] words = needle.split("\\s+");
+        List<String> textWords = Arrays.asList(text.split("\\s+"));
         int rating = 0;
 
         for (String word : words) {
-            if (text.contains(word)) {
+            if (textWords.contains(word)) {
                 rating = rating + 1;
             }
         }

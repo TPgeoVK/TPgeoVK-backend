@@ -109,7 +109,7 @@ public class LocationService {
 
             Float textSimilarity = 0f;
             if (!StringUtils.isEmpty(post)) {
-                textSimilarity = TextProcessor.compareTexts(place.getTitle(), post);
+                textSimilarity = TextProcessor.compareTextsSimple(place.getTitle(), post);
             }
             placeFeatures.setTextSimilarity(textSimilarity);
 
@@ -178,7 +178,7 @@ public class LocationService {
             Float genderRating = placeFeatures.getSameGenderPercent();
 
             Float placeRating = checkinsRating + 1.2f*groupsSimilarityRating + 1.7f*distanceRating + 0.25f*ageRating +
-                    0.25f*genderRating + 2f*textSimilarityRating;
+                    0.25f*genderRating + 10f*textSimilarityRating;
 
             FullPlaceInfo placeInfo = places.stream()
                     .filter(a -> a.getId().equals(placeFeatures.getPlaceId()))
