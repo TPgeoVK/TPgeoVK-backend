@@ -8,6 +8,7 @@ public class PlaceFeatures {
     private Float sameAgePercent;
     private Float sameGenderPercent;
     private Float groupsSimilarity;
+    private Float textSimilarity;
 
     public PlaceFeatures() { }
 
@@ -58,4 +59,8 @@ public class PlaceFeatures {
     public void setGroupsSimilarity(Float groupsSimilarity) {
         this.groupsSimilarity = groupsSimilarity;
     }
+
+    public Float getTextSimilarity() { return textSimilarity; }
+
+    public void setTextSimilarity(Float textSimilarity) { this.textSimilarity = textSimilarity; }
 }

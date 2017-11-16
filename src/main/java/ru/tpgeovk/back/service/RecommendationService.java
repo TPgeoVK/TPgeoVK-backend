@@ -235,80 +235,6 @@ public class RecommendationService {
         return users.stream().map(a -> UserInfo.fromUserFull(a)).collect(Collectors.toList());
     }
 
-
-    public List<FullPlaceInfo> recommendNearestPlaces(UserActor actor, Float latitude, Float longitude)
-            throws VkException {
-        List<PlaceFull> nearestPlaces = null;
-        boolean ok = false;
-        while (!ok) {
-            try {
-                nearestPlaces = vk.places().search(actor, latitude, longitude).q("*").radius(1).count(3).execute().getItems();
-                if (nearestPlaces.size() == 0) {
-                    nearestPlaces = vk.places().search(actor, latitude, longitude).q("*").radius(2).count(3).execute().getItems();
-                }
-                ok = true;
-            } catch (ApiException | ClientException e) {
-                if (e instanceof ApiTooManyException) {
-                    try {
-                        Thread.currentThread().sleep(50);
-                        continue;
-                    } catch (InterruptedException e1) {
-                        Thread.currentThread().interrupt();
-                    }
-                } else {
-                    e.printStackTrace();
-                    throw new VkException(e.getMessage(), e);
-                }
-            }
-        }
-        if (nearestPlaces.size() == 0) {
-            return new ArrayList<>();
-        }
-
-        Map<PlaceFull, Integer> placeRatings = new HashMap<>();
-        String scrtipt;
-        JsonElement response = null;
-        outerLoop: for (PlaceFull place : nearestPlaces) {
-            scrtipt = String.format(PLACE_CHECKINS_USERS, place.getId());
-            ok = false;
-            respLoop: while (!ok) {
-                try {
-                    response = vk.execute().code(actor, scrtipt).execute();
-                    ok = true;
-                } catch (ApiException | ClientException e) {
-                    if (e instanceof ApiTooManyException) {
-                        try {
-                            Thread.currentThread().sleep(100);
-                            continue respLoop;
-                        } catch (InterruptedException e1) {
-                            Thread.currentThread().interrupt();
-                        }
-                    }
-                    e.printStackTrace();
-                    throw new VkException(e.getMessage(), e);
-                }
-            }
-            if (response.getAsJsonArray().size() == 0) {
-                continue outerLoop;
-            }
-            List<Integer> userIds = gson.fromJson(response, new TypeToken<List<Integer>>() {}.getType());
-
-            Map<Integer, List<Integer>> similarUsers = getSimilarUsers(actor, userIds);
-            Integer sum = 0;
-            for (List<Integer> userGroups : similarUsers.values()) {
-                sum = sum + userGroups.size();
-            }
-
-            placeRatings.put(place, sum);
-        }
-
-        return placeRatings.entrySet().stream()
-                .sorted(Comparator.comparingInt(Map.Entry::getValue))
-                .map(a -> FullPlaceInfo.fromPlaceFull(a.getKey(), a.getValue()))
-                .collect(Collectors.toList());
-
-    }
-
     public List<GroupInfo> recommendGroupsByCheckins(UserActor actor, List<CheckinInfo> checkins) throws VkException {
         if ((checkins == null) || (checkins.isEmpty())) {
             return new ArrayList<>();
@@ -427,6 +353,6 @@ public class RecommendationService {
             text2 = text2 + " " + str;
         }
 
-        return TextProcessor.compareTexts(text1, text2);
+        return (double)TextProcessor.compareTexts(text1, text2);
     }
 }

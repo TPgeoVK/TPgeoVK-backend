@@ -12,6 +12,7 @@ import com.vk.api.sdk.exceptions.ClientException;
 import com.vk.api.sdk.objects.places.PlaceFull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import ru.tpgeovk.back.contexts.VkContext;
 import ru.tpgeovk.back.exception.VkException;
 import ru.tpgeovk.back.model.FullPlaceInfo;
@@ -19,6 +20,7 @@ import ru.tpgeovk.back.model.UserFeatures;
 import ru.tpgeovk.back.model.deserializer.UserFeaturesDeserializer;
 import ru.tpgeovk.back.model.features.PlaceFeatures;
 import ru.tpgeovk.back.scripts.VkScripts;
+import ru.tpgeovk.back.text.TextProcessor;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -40,12 +42,14 @@ public class LocationService {
                 .create();
     }
 
-    public FullPlaceInfo detectPlace(UserActor actor, Float latitude, Float longitude) throws VkException {
+    public FullPlaceInfo detectPlace(UserActor actor, Float latitude, Float longitude, String post)
+            throws VkException {
         List<FullPlaceInfo> nearestPlaces = getNearestPlaces(actor, latitude, longitude);
-        return detectPlace(actor, nearestPlaces);
+        return detectPlace(actor, nearestPlaces, post);
     }
 
-    public FullPlaceInfo detectPlace(UserActor actor, List<FullPlaceInfo> places) throws VkException {
+    public FullPlaceInfo detectPlace(UserActor actor, List<FullPlaceInfo> places, String post)
+            throws VkException {
         Map<FullPlaceInfo, Float> placeRatings = new HashMap<>();
 
         UserFeatures actorFeatures = getActorFeatures(actor);
@@ -103,6 +107,12 @@ public class LocationService {
                 placeFeatures.setGroupsSimilarity(0f);
             }
 
+            Float textSimilarity = 0f;
+            if (!StringUtils.isEmpty(post)) {
+                textSimilarity = TextProcessor.compareTexts(place.getTitle(), post);
+            }
+            placeFeatures.setTextSimilarity(textSimilarity);
+
             placesFeatures.add(placeFeatures);
         }
 
@@ -119,16 +129,28 @@ public class LocationService {
             checkinsMax = 1;
         }
 
-        Float similarityMin = (float)placesFeatures.stream()
+        Float groupsSimilarityMin = (float)placesFeatures.stream()
                 .mapToDouble(PlaceFeatures::getGroupsSimilarity)
                 .min()
                 .getAsDouble();
-        Float similarityMax = (float)placesFeatures.stream()
+        Float groupsSimilarityMax = (float)placesFeatures.stream()
                 .mapToDouble(PlaceFeatures::getGroupsSimilarity)
                 .max()
                 .getAsDouble();
-        if (similarityMax.equals(0f)) {
-            similarityMax = 1f;
+        if (groupsSimilarityMax.equals(0f)) {
+            groupsSimilarityMax = 1f;
+        }
+
+        Float textSimilarityMin = (float)placesFeatures.stream()
+                .mapToDouble(PlaceFeatures::getTextSimilarity)
+                .min()
+                .getAsDouble();
+        Float textSimilarityMax = (float)placesFeatures.stream()
+                .mapToDouble(PlaceFeatures::getTextSimilarity)
+                .max()
+                .getAsDouble();
+        if (textSimilarityMax.equals(0f)) {
+            textSimilarityMax = 1f;
         }
 
         Integer distanceMin = placesFeatures.stream()
@@ -146,14 +168,17 @@ public class LocationService {
         for (PlaceFeatures placeFeatures : placesFeatures) {
             Float checkinsRating = (float)(placeFeatures.getCheckinsCount() - checkinsMin) /
                     (float)(checkinsMax - checkinsMin);
-            Float similarityRating = (placeFeatures.getGroupsSimilarity() - similarityMin) /
-                    (similarityMax - similarityMin);
+            Float groupsSimilarityRating = (placeFeatures.getGroupsSimilarity() - groupsSimilarityMin) /
+                    (groupsSimilarityMax - groupsSimilarityMin);
+            Float textSimilarityRating = (placeFeatures.getTextSimilarity() - textSimilarityMin) /
+                    (textSimilarityMax - textSimilarityMin);
             Float distanceRating = (float)(placeFeatures.getDistance() - distanceMin) /
                     (float)(distanceMax - distanceMin);
             Float ageRating = placeFeatures.getSameAgePercent();
             Float genderRating = placeFeatures.getSameGenderPercent();
 
-            Float placeRating = checkinsRating + 1.2f*similarityRating + 1.7f*distanceRating + 0.25f*ageRating + 0.25f*genderRating;
+            Float placeRating = checkinsRating + 1.2f*groupsSimilarityRating + 1.7f*distanceRating + 0.25f*ageRating +
+                    0.25f*genderRating + 2f*textSimilarityRating;
 
             FullPlaceInfo placeInfo = places.stream()
                     .filter(a -> a.getId().equals(placeFeatures.getPlaceId()))

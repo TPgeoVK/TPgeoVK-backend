@@ -66,9 +66,9 @@ public class BackgroundService {
                     usersDataService.getRecommendedFriends(token).addAll(friends);
                     task.setFriendsCompleted(true);
 
-                    List<FullPlaceInfo> places = recommendationService.recommendNearestPlaces(actor, latitude, longitude);
+                    //List<FullPlaceInfo> places = recommendationService.recommendNearestPlaces(actor, latitude, longitude);
                     usersDataService.getRecommendedNearestPlaces(token).clear();
-                    usersDataService.getRecommendedNearestPlaces(token).addAll(places);
+                    //usersDataService.getRecommendedNearestPlaces(token).addAll(places);
                     task.setPlacesCompleted(true);
 
                 } catch (VkException e) {

@@ -3,6 +3,7 @@ package ru.tpgeovk.back.text;
 import com.github.askdrcatcher.jrake.*;
 import com.github.askdrcatcher.jrake.util.FileUtil;
 import com.vk.api.sdk.objects.places.responses.SearchResponse;
+import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.util.*;
@@ -46,27 +47,27 @@ public class TextProcessor {
         return keyWords;
     }
 
-    public static Double compareTexts(String text1, String text2) {
+    public static Float compareTexts(String text1, String text2) {
+        if (StringUtils.isEmpty(text1) || StringUtils.isEmpty(text2)) {
+            return 0f;
+        }
+
         text1 = filterText(text1);
         text2 = filterText(text2);
 
         Set<String> keyWords1 = extractKeyWords(text1);
         Set<String> keyWords2 = extractKeyWords(text2);
 
-        Set<String> minSet = keyWords1.size() < keyWords2.size() ? keyWords1 : keyWords2;
-        Set<String> maxSet = keyWords1 == minSet ? keyWords2 : keyWords1;
-        int commonWords = 0;
-        for (String word : minSet) {
-            if (maxSet.contains(word)) {
-                commonWords++;
-            }
-        }
-        double totalWords = keyWords1.size() + keyWords2.size() - commonWords;
+        Set<String> bufferSet = keyWords1;
+        bufferSet.retainAll(keyWords2);
+        int commonWords = bufferSet.size();
+
+        float totalWords = keyWords1.size() + keyWords2.size() - commonWords;
 
         return commonWords/totalWords;
     }
 
-    public int fuzzyContainRating(String needle, String text) {
+    public static int fuzzyContainRating(String needle, String text) {
         needle = filterText(needle);
         text = filterText(text);
 

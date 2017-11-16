@@ -49,7 +49,8 @@ public class LocationController {
             }
 
             try {
-                FullPlaceInfo place = locationService.detectPlace(actor, request.getLatitude(), request.getLongitude());
+                FullPlaceInfo place = locationService.detectPlace(actor, request.getLatitude(), request.getLongitude(),
+                        request.getText());
                 defResult.setResult(ResponseEntity.ok(place));
             } catch (VkException e) {
                 e.printStackTrace();
