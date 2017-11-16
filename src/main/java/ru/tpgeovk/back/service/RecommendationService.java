@@ -10,6 +10,7 @@ import com.vk.api.sdk.exceptions.ClientException;
 import com.vk.api.sdk.objects.groups.GroupFull;
 import com.vk.api.sdk.objects.places.PlaceFull;
 import com.vk.api.sdk.objects.users.UserFull;
+import com.vk.api.sdk.queries.groups.GroupField;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -252,7 +253,11 @@ public class RecommendationService {
             List<GroupFull> response = null;
             while (!requestOk) {
                 try {
-                    response = vk.groups().getById(actor).groupIds(visitedGroupsIds).execute();
+                    response = vk.groups().getById(actor)
+                            .groupIds(visitedGroupsIds)
+                            .fields(GroupField.MEMBERS_COUNT)
+                            .fields(GroupField.DESCRIPTION)
+                            .execute();
                     requestOk = true;
                 } catch (ApiException | ClientException e) {
                     if (e instanceof ApiTooManyException) {
@@ -318,7 +323,9 @@ public class RecommendationService {
                 .collect(Collectors.toList());
         result.addAll(groupFullResult.stream().map(a -> GroupInfo.fromGroupFull(a)).collect(Collectors.toList()));
 
-        return result;
+        return result.stream()
+                .distinct()
+                .collect(Collectors.toList());
     }
 
     public Double compareGroups(UserActor actor, GroupFull group1, GroupFull group2) throws VkException {

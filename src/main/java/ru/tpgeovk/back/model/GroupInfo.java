@@ -99,4 +99,19 @@ public class GroupInfo {
     public Float getLatitude() { return latitude; }
 
     public void setLatitude(Float latitude) { this.latitude = latitude; }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        GroupInfo groupInfo = (GroupInfo) o;
+
+        return id != null ? id.equals(groupInfo.id) : groupInfo.id == null;
+    }
+
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : 0;
+    }
 }
