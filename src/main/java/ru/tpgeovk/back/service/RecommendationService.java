@@ -238,6 +238,17 @@ public class RecommendationService {
         return users.stream().map(a -> UserInfo.fromUserFull(a)).collect(Collectors.toList());
     }
 
+    public List<GroupInfo> recommendGroups(UserActor actor) throws VkException {
+        List<CheckinInfo> checkins = vkProxyService.getAllUserCheckins(actor);
+        List<GroupInfo> byPlaces = recommendGroupsByCheckinsPlaces(actor, checkins);
+        List<GroupInfo> byUsers = recommendGroupsByCheckinsUsers(actor, checkins);
+
+        byPlaces.addAll(byUsers);
+        Collections.shuffle(byPlaces);
+
+        return byPlaces;
+    }
+
     public List<GroupInfo> recommendGroupsByCheckinsPlaces(UserActor actor, List<CheckinInfo> checkins)
             throws VkException {
         if ((checkins == null) || (checkins.isEmpty())) {

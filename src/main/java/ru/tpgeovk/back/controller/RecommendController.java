@@ -94,9 +94,7 @@ public class RecommendController {
             }
 
             try {
-                List<CheckinInfo> userCheckins = vkProxyService.getAllUserCheckins(actor);
-                //List<GroupInfo> groups = recommendationService.recommendGroupsByCheckinsPlaces(actor, userCheckins);
-                List<GroupInfo> groups = recommendationService.recommendGroupsByCheckinsUsers(actor, userCheckins);
+                List<GroupInfo> groups = recommendationService.recommendGroups(actor);
                 defResult.setResult(ResponseEntity.ok(groups));
             } catch (VkException e) {
                 defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage())));
