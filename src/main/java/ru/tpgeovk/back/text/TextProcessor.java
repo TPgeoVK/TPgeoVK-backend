@@ -28,7 +28,7 @@ public class TextProcessor {
             stopList = new StopList().generateStopWords(new FileUtil("SmartStoplist.txt"));
         } catch (IOException e) {
             e.printStackTrace();
-            return null;
+            return new HashSet<>();
         }
         final CandidateList candidateList = new CandidateList().generateKeywords(sentences, stopList.getStopWords());
 
