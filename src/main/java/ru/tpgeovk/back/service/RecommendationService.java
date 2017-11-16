@@ -73,7 +73,8 @@ public class RecommendationService {
                     }
                 }
                 if (response.getAsJsonArray().size() != 0) {
-                    users.addAll(gson.fromJson(response, new TypeToken<List<Integer>>() {}.getType()));
+                    users.addAll(gson.fromJson(response, new TypeToken<List<Integer>>() {
+                    }.getType()));
                 }
 
             } else {
@@ -99,7 +100,8 @@ public class RecommendationService {
                     }
                 }
                 if (response.getAsJsonArray().size() != 0) {
-                    users.addAll(gson.fromJson(response, new TypeToken<List<Integer>>() {}.getType()));
+                    users.addAll(gson.fromJson(response, new TypeToken<List<Integer>>() {
+                    }.getType()));
                 }
             }
         }
@@ -142,8 +144,7 @@ public class RecommendationService {
                         } catch (InterruptedException e1) {
                             Thread.currentThread().interrupt();
                         }
-                    }
-                    else {
+                    } else {
                         e.printStackTrace();
                         throw new VkException(e.getMessage(), e);
                     }
@@ -185,7 +186,7 @@ public class RecommendationService {
         return commonGroups.entrySet().stream()
                 .filter(a -> (a.getValue().size() != 0) && (a.getValue().size() >= threshold) &&
                         (!a.getKey().equals(actor.getId())))
-                .sorted((a,b) -> (a.getValue().size() - b.getValue().size()))
+                .sorted((a, b) -> (a.getValue().size() - b.getValue().size()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
                         (oldValue, newValue) -> oldValue, HashMap::new));
     }
@@ -230,13 +231,15 @@ public class RecommendationService {
                     }
                 }
             }
-            users.addAll(gson.fromJson(response, new TypeToken<List<UserFull>>(){}.getType()));
+            users.addAll(gson.fromJson(response, new TypeToken<List<UserFull>>() {
+            }.getType()));
         }
 
         return users.stream().map(a -> UserInfo.fromUserFull(a)).collect(Collectors.toList());
     }
 
-    public List<GroupInfo> recommendGroupsByCheckins(UserActor actor, List<CheckinInfo> checkins) throws VkException {
+    public List<GroupInfo> recommendGroupsByCheckinsPlaces(UserActor actor, List<CheckinInfo> checkins)
+            throws VkException {
         if ((checkins == null) || (checkins.isEmpty())) {
             return new ArrayList<>();
         }
@@ -286,14 +289,16 @@ public class RecommendationService {
         JsonElement response = null;
         String script;
         List<GroupFull> groupFullResult = new ArrayList<>();
-        loop1: for (String title : allTitles) {
+        loop1:
+        for (String title : allTitles) {
             if (StringUtils.isEmpty(title)) {
                 continue loop1;
             }
 
             script = String.format(VkScripts.GROUPS_SEARCH, title);
             boolean ok = false;
-            loop2: while (!ok) {
+            loop2:
+            while (!ok) {
                 try {
                     response = vk.execute().code(actor, script).execute();
                     ok = true;
@@ -314,7 +319,8 @@ public class RecommendationService {
                 continue loop1;
             }
 
-            List<GroupFull> groups = gson.fromJson(response, new TypeToken<List<GroupFull>>(){}.getType());
+            List<GroupFull> groups = gson.fromJson(response, new TypeToken<List<GroupFull>>() {
+            }.getType());
             groupFullResult.addAll(groups);
         }
 
@@ -325,6 +331,110 @@ public class RecommendationService {
 
         return result.stream()
                 .distinct()
+                .collect(Collectors.toList());
+    }
+
+    public List<GroupInfo> recommendGroupsByCheckinsUsers(UserActor actor, List<CheckinInfo> userCheckins)
+            throws VkException {
+
+        List<Integer> userIds = getUsersFromCheckins(actor, userCheckins);
+
+        Map<String, Integer> groupRatings = new HashMap<>();
+
+        JsonElement response = null;
+        String script = null;
+        boolean ok;
+
+        int start = 0;
+        int end = 25;
+
+        while (start < userIds.size()) {
+            if (end > userIds.size()) {
+                end = userIds.size();
+            }
+
+            List<Integer> currentIds = userIds.subList(start, end);
+            start = start + 25;
+            end = end + 25;
+
+            script = String.format(VkScripts.GET_USERS_GROUPS, currentIds.toString());
+            ok = false;
+            while (!ok) {
+                try {
+                    response = vk.execute().code(actor, script).execute();
+                    ok = true;
+                } catch (ApiException | ClientException e) {
+                    if (e instanceof ApiTooManyException) {
+                        try {
+                            Thread.currentThread().sleep(50);
+                            continue;
+                        } catch (InterruptedException e1) {
+                            Thread.currentThread().interrupt();
+                        }
+                    }
+                    e.printStackTrace();
+                    throw new VkException(e.getMessage(), e);
+                }
+            }
+
+            if (response.isJsonArray()) {
+                for (JsonElement groupElement : response.getAsJsonArray()) {
+                    String group = groupElement.getAsString();
+                    Integer groupRating = groupRatings.get(group);
+                    groupRating = groupRating == null ? 0 : groupRating + 1;
+                    groupRatings.put(group, groupRating);
+                }
+            } else {
+                JsonElement responseElement = response.getAsJsonObject().getAsJsonArray("response");
+                String group = responseElement.getAsString();
+                Integer groupRating = groupRatings.get(group);
+                groupRating = groupRating == null ? 0 : groupRating + 1;
+                groupRatings.put(group, groupRating);
+            }
+        }
+
+        Integer maxRating = groupRatings.values().stream()
+                .mapToInt(Integer::intValue)
+                .max()
+                .getAsInt();
+
+        if (maxRating.equals(0)) {
+            return new ArrayList<>();
+        }
+
+        Integer threshold = maxRating / 10;
+
+        List<String> groupIds = groupRatings.entrySet().stream()
+                .filter(a -> a.getValue() > threshold)
+                .map(a -> a.getKey())
+                .collect(Collectors.toList());
+
+        ok = false;
+        List<GroupFull> groupFullList = null;
+        while (!ok) {
+            try {
+                groupFullList = vk.groups().getById(actor)
+                        .groupIds(groupIds)
+                        .fields(GroupField.MEMBERS_COUNT, GroupField.DESCRIPTION)
+                        .execute();
+                ok = true;
+            } catch (ApiException | ClientException e) {
+                if (e instanceof ApiTooManyException) {
+                    try {
+                        Thread.currentThread().sleep(50);
+                        continue;
+                    } catch (InterruptedException e1) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+                e.printStackTrace();
+                throw new VkException(e.getMessage(), e);
+            }
+        }
+
+        return groupFullList.stream()
+                .map(a -> GroupInfo.fromGroupFull(a))
+                .filter(a -> (a.getMembersCount() != null) && (a.getMembersCount() < 400000))
                 .collect(Collectors.toList());
     }
 
@@ -360,6 +470,6 @@ public class RecommendationService {
             text2 = text2 + " " + str;
         }
 
-        return (double)TextProcessor.compareTexts(text1, text2);
+        return (double) TextProcessor.compareTexts(text1, text2);
     }
 }

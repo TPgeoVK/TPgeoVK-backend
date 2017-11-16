@@ -72,4 +72,17 @@ public class VkScripts {
             "i = i + 1;\n" +
             "}\n" +
             "return result;\n";
+
+    public static final String GET_USERS_GROUPS = "var userIds = %s;\n" +
+            "var result = [];\n" +
+            "var i = 0;\n" +
+            "while (i < userIds.length) {\n" +
+            "var groups = API.groups.get({\"user_id\":userIds[i],\"count\":70});\n" +
+            "if (groups) {\n" +
+            "result = result + groups.items;\n" +
+            "}\n" +
+            "i = i + 1;\n" +
+            "}\n" +
+            "return result;\n";
+
 }
