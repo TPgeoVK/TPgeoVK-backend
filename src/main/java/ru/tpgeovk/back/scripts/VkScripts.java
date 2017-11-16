@@ -64,9 +64,10 @@ public class VkScripts {
     public static final String GET_USERS_FEATURES = "var userIds = %s;\n" +
             "var result = [];\n" +
             "var i = 0;\n" +
+            "var users = API.users.get({\"user_ids\":userIds,\"fields\":\"bdate,sex\"});\n" +
             "while (i < userIds.length) {\n" +
             "var groups = API.groups.get({\"user_id\":userIds[i],\"count\":1000});\n" +
-            "var user = API.users.get({\"user_ids\":userIds[i],\"fields\":\"bdate,sex\"})[0];\n" +
+            "var user = users[i];\n" +
             "result = result + [{\"userId\":user.id, \"bdate\":user.bdate, \"gender\":user.sex, \"groups\":groups.items}];\n" +
             "i = i + 1;\n" +
             "}\n" +

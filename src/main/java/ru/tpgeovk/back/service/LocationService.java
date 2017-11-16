@@ -234,9 +234,12 @@ public class LocationService {
             return new ArrayList<>();
         }
         List<Integer> userIds = gson.fromJson(response, new TypeToken<List<Integer>>(){}.getType());
+        userIds = userIds.stream()
+                .distinct()
+                .collect(Collectors.toList());
 
         int start = 0;
-        int end = 12;
+        int end = 24;
         List<UserFeatures> result = new ArrayList<>();
 
         while (start < userIds.size()) {
@@ -245,8 +248,8 @@ public class LocationService {
             }
 
             List<Integer> currentIds = userIds.subList(start, end);
-            start = start + 12;
-            end = end + 12;
+            start = start + 24;
+            end = end + 24;
 
             script = String.format(VkScripts.GET_USERS_FEATURES, currentIds.toString());
             ok = false;
