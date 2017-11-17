@@ -85,4 +85,11 @@ public class VkScripts {
             "}\n" +
             "return result;\n";
 
+    public static final String GET_MUTUAL_FRIENDS = "var userIds = %s;\n" +
+            "return API.friends.getMutual({\"target_uids\": userIds});\n";
+
+
+    public static final String FILTER_DEACTIVATED_USERS = "var userIds = %s;\n" +
+            "var users = API.users.get({\"user_ids\": userIds});\n" +
+            "return users@.deactivated;";
 }

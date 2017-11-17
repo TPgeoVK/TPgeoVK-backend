@@ -16,6 +16,12 @@ public class UserFeaturesDeserializer implements JsonDeserializer<UserFeatures> 
         JsonObject jsonObject = jsonElement.getAsJsonObject();
         UserFeatures result = new UserFeatures();
 
+        JsonElement idField = jsonObject.get("userId");
+        if (idField.isJsonNull()) {
+            result.setUserId(0);
+            result.setGender(Boolean.FALSE);
+            return result;
+        }
         Integer userId = jsonObject.getAsJsonPrimitive("userId").getAsInt();
         result.setUserId(userId);
 

@@ -68,12 +68,8 @@ public class RecommendController {
             }
 
             try {
-                List<CheckinInfo> userCheckins = vkProxyService.getAllUserCheckins(actor);
-                List<Integer> users = recommendationService.getUsersFromCheckins(actor, userCheckins);
-                Map<Integer, List<Integer>> usersGroups = recommendationService.getSimilarUsers(actor, users);
-                List<UserInfo> friends = recommendationService.getSimilarUsersInfo(actor, usersGroups);
-
-                defResult.setResult(ResponseEntity.ok(friends));
+                List<UserInfo> result = recommendationService.recommendFriends(actor);
+                defResult.setResult(ResponseEntity.ok(result));
             } catch (VkException e) {
                 defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage())));
             }

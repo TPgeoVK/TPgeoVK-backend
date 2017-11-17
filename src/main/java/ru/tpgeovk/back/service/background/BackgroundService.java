@@ -59,11 +59,11 @@ public class BackgroundService {
                     usersDataService.getCheckins(token).clear();
                     usersDataService.getCheckins(token).addAll(userCheckins);
 
-                    List<Integer> users = recommendationService.getUsersFromCheckins(actor, userCheckins);
-                    Map<Integer, List<Integer>> usersGroups = recommendationService.getSimilarUsers(actor, users);
-                    List<UserInfo> friends= recommendationService.getSimilarUsersInfo(actor, usersGroups);
+                    //List<Integer> users = recommendationService.getUsersFromCheckins(actor, userCheckins);
+                    //Map<Integer, List<Integer>> usersGroups = recommendationService.getSimilarUsers(actor, users);
+                    //List<UserInfo> friends= recommendationService.getSimilarUsersInfo(actor, usersGroups);
                     usersDataService.getRecommendedFriends(token).clear();
-                    usersDataService.getRecommendedFriends(token).addAll(friends);
+                    //usersDataService.getRecommendedFriends(token).addAll(friends);
                     task.setFriendsCompleted(true);
 
                     //List<FullPlaceInfo> places = recommendationService.recommendNearestPlaces(actor, latitude, longitude);

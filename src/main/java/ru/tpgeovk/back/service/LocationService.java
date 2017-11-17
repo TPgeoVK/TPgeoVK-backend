@@ -13,6 +13,7 @@ import com.vk.api.sdk.objects.places.PlaceFull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import ru.tpgeovk.back.contexts.GsonContext;
 import ru.tpgeovk.back.contexts.VkContext;
 import ru.tpgeovk.back.exception.VkException;
 import ru.tpgeovk.back.model.FullPlaceInfo;
@@ -21,6 +22,7 @@ import ru.tpgeovk.back.model.deserializer.UserFeaturesDeserializer;
 import ru.tpgeovk.back.model.features.PlaceFeatures;
 import ru.tpgeovk.back.scripts.VkScripts;
 import ru.tpgeovk.back.text.TextProcessor;
+import ru.tpgeovk.back.util.ModelUtil;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -34,12 +36,13 @@ public class LocationService {
 
     private final Gson gson;
 
+    private final VkProxyService vkService;
+
     @Autowired
-    public LocationService() {
+    public LocationService(VkProxyService vkService) {
         vk = VkContext.getVkApiClient();
-        gson = new GsonBuilder()
-                .registerTypeAdapter(UserFeatures.class, new UserFeaturesDeserializer())
-                .create();
+        gson = GsonContext.createGson();
+        this.vkService = vkService;
     }
 
     public FullPlaceInfo detectPlace(UserActor actor, Float latitude, Float longitude, String post)
@@ -52,7 +55,7 @@ public class LocationService {
             throws VkException {
         Map<FullPlaceInfo, Float> placeRatings = new HashMap<>();
 
-        UserFeatures actorFeatures = getActorFeatures(actor);
+        UserFeatures actorFeatures = vkService.getActorFeatures(actor);
 
         List<PlaceFeatures> placesFeatures = new ArrayList<>();
         for (FullPlaceInfo place : places) {
@@ -84,7 +87,7 @@ public class LocationService {
                 final Integer actorAge = actorFeatures.getAge();
                 if (actorAge != null) {
                     long actorAgeCount = users.stream()
-                            .filter(a -> (a.getAge() != null) && isAgeSimilar(actorAge, a.getAge()))
+                            .filter(a -> (a.getAge() != null) && ModelUtil.isAgeSimilar(actorAge, a.getAge()))
                             .count();
                     agePercent = (float) actorAgeCount / usersCount;
                 }
@@ -263,116 +266,11 @@ public class LocationService {
                 .distinct()
                 .collect(Collectors.toList());
 
-        int start = 0;
-        int end = 24;
-        List<UserFeatures> result = new ArrayList<>();
-
-        while (start < userIds.size()) {
-            if (end > userIds.size()) {
-                end = userIds.size();
-            }
-
-            List<Integer> currentIds = userIds.subList(start, end);
-            start = start + 24;
-            end = end + 24;
-
-            script = String.format(VkScripts.GET_USERS_FEATURES, currentIds.toString());
-            ok = false;
-            while (!ok) {
-                try {
-                    response = vk.execute().code(actor, script).execute();
-                    ok = true;
-                } catch (ApiException | ClientException e) {
-                    if (e instanceof ApiTooManyException) {
-                        try {
-                            Thread.currentThread().sleep(100);
-                            continue;
-                        } catch (InterruptedException e1) {
-                            Thread.currentThread().interrupt();
-                        }
-                    }
-                    e.printStackTrace();
-                    throw new VkException(e.getMessage(), e);
-                }
-            }
-
-            List<UserFeatures> users = gson.fromJson(response, new TypeToken<List<UserFeatures>>(){}.getType());
-            result.addAll(users);
-        }
-
-        return result;
-    }
-
-    private UserFeatures getActorFeatures(UserActor actor) throws VkException {
-        JsonElement response = null;
-        String script = String.format(VkScripts.GET_USER_FEATURES, actor.getId());
-        boolean ok = false;
-        while (!ok) {
-            try {
-                response = vk.execute().code(actor, script).execute();
-                ok = true;
-            } catch (ApiException | ClientException e) {
-                if (e instanceof ApiTooManyException) {
-                    try {
-                        Thread.currentThread().sleep(100);
-                        continue;
-                    } catch (InterruptedException e1) {
-                        Thread.currentThread().interrupt();
-                    }
-                }
-                e.printStackTrace();
-                throw new VkException(e.getMessage(), e);
-            }
-        }
-
-        UserFeatures actorFeatures = gson.fromJson(response, UserFeatures.class);
-        return actorFeatures;
-    }
-
-    private Boolean isAgeSimilar(Integer actorAge, Integer comparingAge) {
-        Integer youngerRadius = 0;
-        Integer olderRadius = 0;
-
-        if (actorAge < 12) {
-            youngerRadius = 12;
-            olderRadius = 5;
-        }
-        else if ((actorAge >= 12) && (actorAge < 17)) {
-            youngerRadius = 4;
-            olderRadius = 4;
-        }
-        else if ((actorAge >= 17) && (actorAge < 25)) {
-            youngerRadius = 3;
-            olderRadius = 7;
-        }
-        else if ((actorAge >= 25) && (actorAge < 31)) {
-            youngerRadius = 5;
-            olderRadius = 8;
-        }
-        else if ((actorAge >= 31) && (actorAge < 40)) {
-            youngerRadius = 7;
-            olderRadius = 12;
-        }
-        else {
-            youngerRadius = 10;
-            olderRadius = 40;
-        }
-
-        if (actorAge >= comparingAge) {
-            return  actorAge - comparingAge <= youngerRadius;
-        } else {
-            return comparingAge - actorAge <= olderRadius;
-        }
-    }
-
-    private Integer countCommonGroups(List<String> actorGroups, List<String> comparingGroups) {
-        List<Integer> comparingCopy = new ArrayList(comparingGroups);
-        comparingCopy.retainAll(actorGroups);
-        return comparingCopy.size();
+        return vkService.getUsersFeatures(actor, userIds);
     }
 
     private Float calculateGroupsSimilarity(List<String> actorGroups, List<String> comparingGroups) {
-        Integer commonGroups = countCommonGroups(actorGroups, comparingGroups);
+        Integer commonGroups = ModelUtil.countCommonGroups(actorGroups, comparingGroups);
         Float result = (float)commonGroups / ((float)(actorGroups.size() + comparingGroups.size() - commonGroups));
         return result;
     }

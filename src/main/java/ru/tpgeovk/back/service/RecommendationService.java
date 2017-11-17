@@ -2,6 +2,7 @@ package ru.tpgeovk.back.service;
 
 import com.google.gson.*;
 import com.google.gson.reflect.TypeToken;
+import com.sun.org.apache.xpath.internal.operations.Mod;
 import com.vk.api.sdk.client.VkApiClient;
 import com.vk.api.sdk.client.actors.UserActor;
 import com.vk.api.sdk.exceptions.ApiException;
@@ -14,11 +15,14 @@ import com.vk.api.sdk.queries.groups.GroupField;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import ru.tpgeovk.back.contexts.GsonContext;
 import ru.tpgeovk.back.contexts.VkContext;
 import ru.tpgeovk.back.exception.VkException;
 import ru.tpgeovk.back.model.*;
+import ru.tpgeovk.back.model.UserFeatures;
 import ru.tpgeovk.back.scripts.VkScripts;
 import ru.tpgeovk.back.text.TextProcessor;
+import ru.tpgeovk.back.util.ModelUtil;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -37,76 +41,8 @@ public class RecommendationService {
     @Autowired
     public RecommendationService(VkProxyService vkProxyService) {
         vk = VkContext.getVkApiClient();
-        gson = new GsonBuilder().create();
+        gson = GsonContext.createGson();
         this.vkProxyService = vkProxyService;
-    }
-
-    public List<Integer> getUsersFromCheckins(UserActor actor, List<CheckinInfo> userCheckins) throws VkException {
-        if ((userCheckins == null) || (userCheckins.isEmpty())) {
-            userCheckins = vkProxyService.getAllUserCheckins(actor);
-        }
-        List<Integer> users = new ArrayList<>();
-        String script;
-        JsonElement response = null;
-        boolean ok = false;
-        for (CheckinInfo checkin : userCheckins) {
-            if (!checkin.getPlace().getId().equals(0)) {
-                ok = false;
-                while (!ok) {
-                    try {
-                        /** Locale.US для точки вместо запятой при подстановке Float */
-                        script = String.format(Locale.US, VkScripts.PLACE_CHECKINS_USERS, checkin.getPlace().getId());
-                        response = vk.execute().code(actor, script).execute();
-                        ok = true;
-                    } catch (ApiException | ClientException e) {
-                        if (e instanceof ApiTooManyException) {
-                            try {
-                                Thread.currentThread().sleep(50);
-                                continue;
-                            } catch (InterruptedException e1) {
-                                Thread.currentThread().interrupt();
-                            }
-                        } else {
-                            e.printStackTrace();
-                            throw new VkException(e.getMessage(), e);
-                        }
-                    }
-                }
-                if (response.getAsJsonArray().size() != 0) {
-                    users.addAll(gson.fromJson(response, new TypeToken<List<Integer>>() {
-                    }.getType()));
-                }
-
-            } else {
-                ok = false;
-                while (!ok) {
-                    try {
-                        script = String.format(Locale.US, VkScripts.COORD_CHECKINS_USERS, checkin.getPlace().getLatitude(),
-                                checkin.getPlace().getLongitude());
-                        response = vk.execute().code(actor, script).execute();
-                        ok = true;
-                    } catch (ApiException | ClientException e) {
-                        if (e instanceof ApiTooManyException) {
-                            try {
-                                Thread.currentThread().sleep(50);
-                                continue;
-                            } catch (InterruptedException e1) {
-                                Thread.currentThread().interrupt();
-                            }
-                        } else {
-                            e.printStackTrace();
-                            throw new VkException(e.getMessage(), e);
-                        }
-                    }
-                }
-                if (response.getAsJsonArray().size() != 0) {
-                    users.addAll(gson.fromJson(response, new TypeToken<List<Integer>>() {
-                    }.getType()));
-                }
-            }
-        }
-
-        return users;
     }
 
     public Map<Integer, List<Integer>> getSimilarUsers(UserActor actor, List<Integer> userIds) throws VkException {
@@ -191,28 +127,64 @@ public class RecommendationService {
                         (oldValue, newValue) -> oldValue, HashMap::new));
     }
 
-    public List<UserInfo> getSimilarUsersInfo(UserActor actor, Map<Integer, List<Integer>> userGroups) throws VkException {
-        if ((userGroups == null) || (userGroups.isEmpty())) {
-            return new ArrayList<>();
+    public List<UserInfo> recommendFriends(UserActor actor) throws VkException {
+        List<CheckinInfo> checkins = vkProxyService.getAllUserCheckins(actor);
+        List<Integer> users = vkProxyService.getUsersFromCheckins(actor, checkins);
+
+        List<UserInfo> byInterests = getUsersWithCommonInterests(actor, users);
+        List<UserInfo> byMutualFriends = getUsersWithMutualFriends(actor, users);
+
+        byInterests.addAll(byMutualFriends);
+        return byInterests;
+    }
+
+    public List<UserInfo> getUsersWithCommonInterests(UserActor actor, List<Integer> userIds) throws VkException {
+        List<UserFeatures> usersFeatures = vkProxyService.getUsersFeatures(actor, userIds);
+        UserFeatures actorFeatures = vkProxyService.getActorFeatures(actor);
+
+        Map<Integer, Integer> usersRatings = new HashMap<>();
+        Integer maxRating = 0;
+        for (UserFeatures userFeatures : usersFeatures) {
+            Integer commonGroupsCount = ModelUtil.countCommonGroups(actorFeatures.getGroups(),
+                    userFeatures.getGroups());
+            Integer sameAge = ModelUtil.isAgeSimilar(actorFeatures.getAge(), userFeatures.getAge()) ? 2 : 1;
+
+            Integer rating = sameAge * commonGroupsCount;
+            if (rating > maxRating) {
+                maxRating = rating;
+            }
+            usersRatings.put(userFeatures.getUserId(), rating);
         }
-        List<Integer> userIds = new ArrayList<>();
-        userIds.addAll(userGroups.keySet());
+
+        Integer threshold = maxRating / 3;
+        List<Integer> users = usersRatings.entrySet().stream()
+                .filter(a -> a.getValue() >= threshold)
+                .map(a -> a.getKey())
+                .collect(Collectors.toList());
+
+        return vkProxyService.getUsers(actor, users, "COMMON_INTERESTS");
+    }
+
+    public List<UserInfo> getUsersWithMutualFriends(UserActor actor, List<Integer> userIds) throws VkException {
+        List<Integer> withMutualFriends = new ArrayList<>();
+
+        boolean ok;
+        JsonElement response = null;
+        String script;
 
         int start = 0;
-        int end = 10000;
-        String script;
-        JsonElement response = null;
-        List<UserFull> users = new ArrayList<>();
+        int end = 100;
         while (start < userIds.size()) {
             if (end > userIds.size()) {
                 end = userIds.size();
             }
-            List<Integer> currentIds = userIds.subList(start, end);
-            start = start + 1000;
-            end = end + 1000;
 
-            script = "return API.users.get({\"user_ids\":" + currentIds.toString() + ",\"fields\":\"photo_200,schools,career,universities\"});";
-            boolean ok = false;
+            List<Integer> currentIds = userIds.subList(start, end);
+            start = start + 100;
+            end = end + 100;
+
+            ok = false;
+            script = String.format(VkScripts.GET_MUTUAL_FRIENDS, currentIds.toString());
             while (!ok) {
                 try {
                     response = vk.execute().code(actor, script).execute();
@@ -231,11 +203,19 @@ public class RecommendationService {
                     }
                 }
             }
-            users.addAll(gson.fromJson(response, new TypeToken<List<UserFull>>() {
-            }.getType()));
+
+            JsonArray mutualFriendsField = response.getAsJsonArray();
+            for (JsonElement user : mutualFriendsField) {
+                JsonObject userObject =user.getAsJsonObject();
+                Integer userId = userObject.getAsJsonPrimitive("id").getAsInt();
+                Integer mutualFriendsCount = userObject.getAsJsonPrimitive("common_count").getAsInt();
+                if (!mutualFriendsCount.equals(0)) {
+                    withMutualFriends.add(userId);
+                }
+            }
         }
 
-        return users.stream().map(a -> UserInfo.fromUserFull(a)).collect(Collectors.toList());
+        return vkProxyService.getUsers(actor, withMutualFriends, "COMMON_FRIENDS");
     }
 
     public List<GroupInfo> recommendGroups(UserActor actor) throws VkException {
@@ -348,7 +328,7 @@ public class RecommendationService {
     public List<GroupInfo> recommendGroupsByCheckinsUsers(UserActor actor, List<CheckinInfo> userCheckins)
             throws VkException {
 
-        List<Integer> userIds = getUsersFromCheckins(actor, userCheckins);
+        List<Integer> userIds = vkProxyService.getUsersFromCheckins(actor, userCheckins);
 
         Map<String, Integer> groupRatings = new HashMap<>();
 
@@ -483,4 +463,6 @@ public class RecommendationService {
 
         return (double) TextProcessor.compareTexts(text1, text2);
     }
+
+
 }

@@ -14,6 +14,7 @@ public class UserInfo {
     private String occupation;
     private String photo200;
     private String photo200Base64;
+    private String reason;
 
     public static UserInfo fromUserFull(UserFull userFull) {
         UserInfo result = new UserInfo();
@@ -30,6 +31,26 @@ public class UserInfo {
         }
 
         result.setPhoto200(userFull.getPhoto200());
+
+        return result;
+    }
+
+    public static UserInfo fromUserFull(UserFull userFull, String reason) {
+        UserInfo result = new UserInfo();
+        result.setId(userFull.getId());
+        result.setFirstName(userFull.getFirstName());
+        result.setLastName(userFull.getLastName());
+
+        if ((userFull.getCareer() != null) && (userFull.getCareer().size() != 0)) {
+            result.setOccupation(userFull.getCareer().get(0).getCompany());
+        } else if (StringUtils.isEmpty(userFull.getUniversityName())) {
+            result.setOccupation(userFull.getUniversityName());
+        } else if ((userFull.getSchools() != null) && (userFull.getSchools().size() != 0)) {
+            result.setOccupation(userFull.getSchools().get(0).getName());
+        }
+
+        result.setPhoto200(userFull.getPhoto200());
+        result.setReason(reason);
 
         return result;
     }
@@ -106,4 +127,8 @@ public class UserInfo {
             this.photo200Base64 = null;
         }
     }
+
+    public String getReason() { return reason; }
+
+    public void setReason(String reason) { this.reason = reason; }
 }
