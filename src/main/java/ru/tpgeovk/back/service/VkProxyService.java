@@ -227,33 +227,44 @@ public class VkProxyService {
     }
 
     public List<UserInfo> getUsers(UserActor actor, List<Integer> userIds) throws VkException {
-        String script = String.format("return API.users.get({\"user_ids\":%s,\"fields\":\"photo_200,schools,career,universities\"});",
-                userIds.toString());
+        int start = 0;
+        int end = 1000;
+        String script;
         JsonElement response = null;
-        boolean ok = false;
-        while (!ok) {
-            try {
-                response = vk.execute().code(actor, script).execute();
-                ok = true;
-            } catch (ApiException | ClientException e) {
-                if (e instanceof ApiTooManyException) {
-                    try {
-                        Thread.currentThread().sleep(50);
-                        continue;
-                    } catch (InterruptedException e1) {
-                        Thread.currentThread().interrupt();
+        List<UserFull> users = new ArrayList<>();
+        while (start < userIds.size()) {
+            if (end > userIds.size()) {
+                end = userIds.size();
+            }
+            List<Integer> currentIds = userIds.subList(start, end);
+            start = start + 1000;
+            end = end + 1000;
+
+            script = "return API.users.get({\"user_ids\":" + currentIds.toString()
+                    + ",\"fields\":\"photo_200,schools,career,universities\"});";
+            boolean ok = false;
+            while (!ok) {
+                try {
+                    response = vk.execute().code(actor, script).execute();
+                    ok = true;
+                } catch (ApiException | ClientException e) {
+                    if (e instanceof ApiTooManyException) {
+                        try {
+                            Thread.currentThread().sleep(50);
+                            continue;
+                        } catch (InterruptedException e1) {
+                            Thread.currentThread().interrupt();
+                        }
+                    } else {
+                        e.printStackTrace();
+                        throw new VkException(e.getMessage(), e);
                     }
-                } else {
-                    e.printStackTrace();
-                    throw new VkException(e.getMessage(), e);
                 }
             }
+            users.addAll(gson.fromJson(response, new TypeToken<List<UserFull>>() {}.getType()));
         }
 
-        List<UserFull> users = gson.fromJson(response, new TypeToken<List<UserFull>>() {}.getType());
-        return users.stream()
-                .map(a -> UserInfo.fromUserFull(a))
-                .collect(Collectors.toList());
+        return users.stream().map(a -> UserInfo.fromUserFull(a)).collect(Collectors.toList());
     }
 
     public List<UserInfo> getUsers(UserActor actor, List<Integer> userIds, String reason) throws VkException {

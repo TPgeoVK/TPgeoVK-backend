@@ -131,11 +131,13 @@ public class RecommendationService {
         List<CheckinInfo> checkins = vkProxyService.getAllUserCheckins(actor);
         List<Integer> users = vkProxyService.getUsersFromCheckins(actor, checkins);
 
-        List<UserInfo> byInterests = getUsersWithCommonInterests(actor, users);
         List<UserInfo> byMutualFriends = getUsersWithMutualFriends(actor, users);
+        List<UserInfo> byInterests = getUsersWithCommonInterests(actor, users);
 
-        byInterests.addAll(byMutualFriends);
-        return byInterests;
+        byMutualFriends.addAll(byInterests);
+        return byMutualFriends.stream()
+                .distinct()
+                .collect(Collectors.toList());
     }
 
     public List<UserInfo> getUsersWithCommonInterests(UserActor actor, List<Integer> userIds) throws VkException {
@@ -166,7 +168,7 @@ public class RecommendationService {
     }
 
     public List<UserInfo> getUsersWithMutualFriends(UserActor actor, List<Integer> userIds) throws VkException {
-        List<Integer> withMutualFriends = new ArrayList<>();
+        Map<Integer, Integer> withMutualFriends = new HashMap<>();
 
         boolean ok;
         JsonElement response = null;
@@ -210,12 +212,18 @@ public class RecommendationService {
                 Integer userId = userObject.getAsJsonPrimitive("id").getAsInt();
                 Integer mutualFriendsCount = userObject.getAsJsonPrimitive("common_count").getAsInt();
                 if (!mutualFriendsCount.equals(0)) {
-                    withMutualFriends.add(userId);
+                    withMutualFriends.put(userId, mutualFriendsCount);
                 }
             }
         }
 
-        return vkProxyService.getUsers(actor, withMutualFriends, "COMMON_FRIENDS");
+        List<UserInfo> usersInfo = vkProxyService.getUsers(actor, new ArrayList<>(withMutualFriends.keySet()));
+        return usersInfo.stream()
+                .map(a -> {
+                    a.setReason(withMutualFriends.get(a.getId()).toString() + " общих друзей");
+                    return a;
+                })
+                .collect(Collectors.toList());
     }
 
     public List<GroupInfo> recommendGroups(UserActor actor) throws VkException {

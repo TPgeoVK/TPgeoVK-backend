@@ -131,4 +131,19 @@ public class UserInfo {
     public String getReason() { return reason; }
 
     public void setReason(String reason) { this.reason = reason; }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        UserInfo userInfo = (UserInfo) o;
+
+        return id != null ? id.equals(userInfo.id) : userInfo.id == null;
+    }
+
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : 0;
+    }
 }
