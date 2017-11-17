@@ -249,8 +249,7 @@ public class RecommendationService {
                 try {
                     response = vk.groups().getById(actor)
                             .groupIds(visitedGroupsIds)
-                            .fields(GroupField.MEMBERS_COUNT)
-                            .fields(GroupField.DESCRIPTION)
+                            .fields(GroupField.MEMBERS_COUNT, GroupField.DESCRIPTION)
                             .execute();
                     requestOk = true;
                 } catch (ApiException | ClientException e) {
