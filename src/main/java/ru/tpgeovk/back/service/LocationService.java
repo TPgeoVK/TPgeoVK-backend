@@ -234,10 +234,6 @@ public class LocationService {
             return new ArrayList<>();
         }
 
-        if (nearestPlaces.size() > 15) {
-            nearestPlaces = nearestPlaces.subList(0, 15);
-        }
-
         return nearestPlaces.stream()
                 .map(a -> FullPlaceInfo.fromPlaceFull(a))
                 .collect(Collectors.toList());
