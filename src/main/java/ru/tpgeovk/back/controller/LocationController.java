@@ -51,7 +51,11 @@ public class LocationController {
             try {
                 FullPlaceInfo place = locationService.detectPlace(actor, request.getLatitude(), request.getLongitude(),
                         request.getText());
-                defResult.setResult(ResponseEntity.ok(place));
+                if (place != null) {
+                    defResult.setResult(ResponseEntity.ok(place));
+                } else {
+                    defResult.setResult(ResponseEntity.ok(new ErrorResponse("No any places near your coordinates!")));
+                }
             } catch (VkException e) {
                 e.printStackTrace();
                 defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage())));

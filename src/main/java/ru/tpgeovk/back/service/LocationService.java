@@ -48,6 +48,9 @@ public class LocationService {
     public FullPlaceInfo detectPlace(UserActor actor, Float latitude, Float longitude, String post)
             throws VkException {
         List<FullPlaceInfo> nearestPlaces = getNearestPlaces(actor, latitude, longitude);
+        if (nearestPlaces.isEmpty()) {
+            return null;
+        }
         return detectPlace(actor, nearestPlaces, post);
     }
 
