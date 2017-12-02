@@ -48,6 +48,11 @@ public class LocationController {
                 return;
             }
 
+            if (request.getLongitude() == null || request.getLatitude() == null) {
+                defResult.setResult(ResponseEntity.badRequest().body(new ErrorResponse("Null in coordinates!")));
+                return;
+            }
+
             try {
                 FullPlaceInfo place = locationService.detectPlace(actor, request.getLatitude(), request.getLongitude(),
                         request.getText());
